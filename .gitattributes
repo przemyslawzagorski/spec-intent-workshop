@@ -1,3 +1,13 @@
+# Domyslnie: wszystko tekstowe normalizujemy do LF w repozytorium.
+# Bez tej linii pliki spoza listy nizej trafiaja do repo z koncami zaleznymi
+# od tego, kto commitowal - a plik danych czytany przez skrypt bashowy
+# z CRLF wywala sie na Linuksie w sposob trudny do rozszyfrowania.
+* text=auto eol=lf
+
+# Windowsowe skrypty to jedyny wyjatek - te potrzebuja CRLF.
+*.bat           text eol=crlf
+*.cmd           text eol=crlf
+
 # Skrypty MUSZA miec konce linii LF.
 #
 # Z CRLF bash na Linuksie wywala sie na `$'\r': command not found`, a potem na

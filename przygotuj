@@ -44,8 +44,11 @@ CACHE=".tooling/cache/spring-petclinic"
 petclinic() {
   local dest="$1"
   local url commit
-  url=$(grep '^URL=' repo/petclinic/UPSTREAM | cut -d= -f2-)
-  commit=$(grep '^COMMIT=' repo/petclinic/UPSTREAM | cut -d= -f2-)
+  # Obcinamy znaki sterujace. Gdyby UPSTREAM trafil do repo z koncami CRLF,
+  # do zmiennej wpadlby znak powrotu karetki i git dostalby hasz z ogonem.
+  # Pod Linuksem objawia sie to jako: "<hasz>? is not a commit".
+  url=$(grep '^URL=' repo/petclinic/UPSTREAM | cut -d= -f2- | tr -d '[:cntrl:]')
+  commit=$(grep '^COMMIT=' repo/petclinic/UPSTREAM | cut -d= -f2- | tr -d '[:cntrl:]')
 
   if [ ! -d "$CACHE" ]; then
     krok "cache pusty, klonuje z $url (to potrwa)"
