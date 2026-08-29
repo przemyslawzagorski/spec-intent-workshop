@@ -216,7 +216,19 @@ Z02() {
 Z06() {
   echo "Z06 - dokumentacja jako kod:"
   local p="praca/Z06"
-  musi  "jest mkdocs.yml"        test -f "$p/mkdocs.yml"
+  # Najczestszy blad: mkdocs.yml laduje w srodku klona petclinica, bo to
+  # konwencjonalne miejsce. Wtedy wygenerowany site/ zderza sie z buildem
+  # Mavena (nohttp skanuje CSS motywu). Mowimy wprost, co znalezlismy.
+  musi  "jest mkdocs.yml" bash -c "
+      test -f '$p/mkdocs.yml' && exit 0
+      if test -f '$p/spring-petclinic/mkdocs.yml'; then
+        echo 'ZNALAZLEM go w spring-petclinic/ - to nie tam.'
+        echo 'Dokumentacja ma lezec OBOK petclinica, nie w srodku.'
+        echo 'Napraw:  cd $p && mv spring-petclinic/mkdocs.yml spring-petclinic/docs .'
+      else
+        echo 'szukam w: $p/mkdocs.yml - wroc do kroku 1 w zadaniu'
+      fi
+      exit 1"
   musi  "sa strony w docs/"      bash -c "ls '$p'/docs/*.md >/dev/null 2>&1"
   # --strict zamienia ostrzezenia w bledy. Bez tego link do nieistniejacej
   # strony przechodzi po cichu, a o to wlasnie chodzi w tym zadaniu.

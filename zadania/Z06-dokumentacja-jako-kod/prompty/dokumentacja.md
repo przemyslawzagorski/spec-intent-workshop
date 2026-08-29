@@ -7,6 +7,10 @@ Wklej agentowi w katalogu `praca/Z06`, mając obok klon petclinica.
 Napisz dokumentację techniczną projektu, który leży w `spring-petclinic/`.
 Ma być zbudowana przez `mkdocs` i przechodzić `mkdocs build --strict`.
 
+**Wszystkie pliki twórz w katalogu bieżącym, NIE w `spring-petclinic/`.**
+To jest cudze repozytorium — czytasz je, ale nic w nim nie zapisujesz.
+Wygenerowana strona zderzyłaby się z jego własnym buildem.
+
 Utwórz:
 
 1. `mkdocs.yml` — konfiguracja z motywem `material`, nawigacją i tytułem.
@@ -32,6 +36,12 @@ Dalsze zasady:
   nie uruchomić.
 - **Nie wstawiaj linków do stron, których nie tworzysz.** `--strict` wywali build.
 - Wszystkie komendy, które podajesz, muszą działać. Sprawdź je w `pom.xml`.
+- **Komendy muszą działać dla kogoś, kto ma tylko `spring-petclinic/`** —
+  bez naszego warsztatu i bez jego skrótów. Pisz `./mvnw` albo `mvn`,
+  nigdy aliasów ani funkcji z otoczenia, w którym akurat siedzisz.
+  Jeśli u ciebie `mvn` wymaga dodatkowych flag przez firmowe proxy —
+  **to jest twoje środowisko, nie właściwość tego projektu**, i nie ma tego
+  w dokumentacji.
 - Po polsku. Zwięźle. Żadnej strony na temat tego, czym jest Spring Boot.
 
 Na koniec, w osobnym pliku `ZMYSLONE.md`, wypisz:

@@ -108,6 +108,32 @@ Efekt ten sam.
 cd praca/Z06
 ```
 
+**Co zobaczysz:** katalog `praca/Z06` z jedną rzeczą w środku — klonem
+`spring-petclinic/`. Reszta powstanie za chwilę.
+
+> ### Gdzie mają powstać pliki — przeczytaj, bo to jedyna pułapka w tym zadaniu
+>
+> `mkdocs.yml` i katalog `docs/` powstają **w `praca/Z06`**, czyli **obok**
+> petclinica, nie w środku.
+>
+> ```
+> praca/Z06/
+>   mkdocs.yml          ← tutaj
+>   docs/               ← i tutaj
+>   spring-petclinic/   ← to jest tylko materiał do czytania
+> ```
+>
+> **Dlaczego to ma znaczenie, a nie jest czepianiem się:** `mkdocs` generuje
+> katalog z gotową stroną — kilkaset plików motywu, CSS, HTML. Jeśli wylądują
+> w środku petclinica, zaczną je skanować jego własne wtyczki budowania.
+>
+> Ktoś, kto zrobił to zadanie przed tobą, dostał dokładnie to:
+> **16 naruszeń `nohttp` w wygenerowanym CSS-ie motywu**, przy `mvn validate`,
+> które przed chwilą przechodziło. Zero z tego dotyczyło jego dokumentacji.
+>
+> To jest sensowna zasada także poza warsztatem: **dokumentacja o cudzym
+> repozytorium nie mieszka w tym repozytorium.**
+
 !!! Uwaga na pierwsze uruchomienie
     Pierwszy `uvx` **ciągnie paczki i trwa około dwóch minut**. Kolejne to
     4 sekundy. Odpal build raz, zanim zaczniesz pisać — żeby nie czekać
@@ -123,7 +149,15 @@ Masz dwie drogi, obie dają ten sam efekt:
 - **skill** `dokumentacja-repo` (skopiuj z rozwiązania, patrz wyżej),
 - **prompt** [prompty/dokumentacja.md](prompty/dokumentacja.md) — do wklejenia.
 
-Efekt: `mkdocs.yml`, cztery strony w `docs/` i `ZMYSLONE.md`.
+**Efekt:** `mkdocs.yml`, cztery strony w `docs/` i `ZMYSLONE.md` — wszystko
+w `praca/Z06`, nie w `spring-petclinic/`.
+
+**Jeśli agent zapisze je w środku petclinica** — a robi tak często, bo to
+konwencjonalne miejsce — po prostu je przenieś:
+
+```bash
+mv spring-petclinic/mkdocs.yml spring-petclinic/docs .
+```
 
 **2 · Zbuduj** (5 min):
 
@@ -190,6 +224,14 @@ Pogadamy o:
 - **Co można postawić pod bramkę naprawdę.** Test, że każdy publiczny endpoint
   ma wpis w dokumentacji. Test, że każda ścieżka wymieniona w dokumentacji
   istnieje na dysku. To drugie to dziesięć linii i łapie zaskakująco dużo.
+- **Gdzie postawiliście pliki.** Kto wsadził `mkdocs.yml` do środka petclinica,
+  zderzył się z jego buildem. To nie jest przypadek — **agent domyślnie kładzie
+  konfigurację w projekcie, który dokumentuje**, bo tak wygląda dziewięć na
+  dziesięć repozytoriów, które widział. Trzeba mu powiedzieć inaczej.
+- **Komendy, które działają tylko u ciebie.** Jeśli w twoim środowisku `mvn`
+  potrzebuje dodatkowych flag przez firmowe proxy — **to jest twoje środowisko,
+  nie właściwość projektu**. Dokumentacja, która to utrwala, kłamie o projekcie
+  i przestaje działać u pierwszej osoby z zewnątrz.
 - **Dokumentacja dla agenta kontra dla człowieka.** Dla człowieka: narracja,
   kontekst, „dlaczego". Dla agenta: ścieżki, nazwy, tabele. Częściowo to samo,
   ale nie do końca — i warto wiedzieć, dla kogo piszesz.
