@@ -55,6 +55,17 @@ Warsztat jest agnostyczny: wszystko, czego używamy, to pliki, komendy i Maven.
 albo WSL. Skrypty używają `source`, `chmod` i `./` — w `cmd.exe` ani PowerShellu
 nie zadziałają. Na macOS i Linuksie nic nie musisz robić.
 
+> **Wybierz jedną powłokę i zostań w niej.** Git Bash **albo** WSL, nie obie
+> naprzemiennie.
+>
+> `bootstrap.sh` pobiera JDK i Mavena **dla systemu, w którym go uruchomisz**.
+> Bootstrap zrobiony w Git Bashu zostawia narzędzia windowsowe, a te pod WSL-em
+> nie działają — i odwrotnie. `./sprawdz env` to wykrywa i powie ci, co zrobić,
+> ale najprościej po prostu nie mieszać.
+>
+> Jeśli już zmieszałeś: `rm -rf .tooling && bash docs/setup/bootstrap.sh`
+> w tej powłoce, której chcesz używać.
+
 Skille instalujemy w Z01 — a czym w ogóle są, wyjaśnia
 [docs/skille.md](docs/skille.md).
 

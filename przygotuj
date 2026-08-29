@@ -95,31 +95,42 @@ pusto() {
 
 # --- co potrzebuje ktore zadanie -------------------------------------------
 
+# GDZIE — katalog, w ktorym uczestnik ma pracowac. Czesto NIE jest to
+# praca/<ZADANIE>, tylko sklonowany projekt w srodku. Komunikat koncowy musi
+# to mowic dokladnie, bo inaczej ludzie uruchamiaja mvn tam, gdzie nie ma poma.
+# PIERWSZA — jedno zdanie ostrzezenia, jesli zadanie ma pulapke z katalogiem.
+GDZIE=""
+PIERWSZA=""
+
 przygotuj_zadanie() {
   local z="$1" p="praca/$1"
+  GDZIE="$p"
   komenda mkdir -p "$p"
   case "$z" in
-    Z01) petclinic "$p/spring-petclinic" ;;
-    Z02) pusto "$p" ;;
-    Z03) petclinic "$p/spring-petclinic" ;;
-    Z04) petclinic "$p/spring-petclinic" ;;
+    Z01) petclinic "$p/spring-petclinic"; GDZIE="$p/spring-petclinic" ;;
+    Z02) pusto "$p"
+         PIERWSZA="zaczynasz od 'wsmvn archetype:generate' - patrz krok 1" ;;
+    Z03) petclinic "$p/spring-petclinic"; GDZIE="$p/spring-petclinic" ;;
+    Z04) petclinic "$p/spring-petclinic"; GDZIE="$p/spring-petclinic" ;;
     Z05) petclinic "$p/spring-petclinic"
          krok "intencja, od ktorej zaczyna sie przesluchanie"
          komenda cp zadania/Z05-od-pomyslu-do-specyfikacji/INTENCJA.md "$p/"
-         ;;
-    Z06) petclinic "$p/spring-petclinic" ;;
+         PIERWSZA="zacznij od przeczytania INTENCJA.md tutaj" ;;
+    Z06) petclinic "$p/spring-petclinic"
+         PIERWSZA="dokumentacja powstaje TUTAJ, obok spring-petclinic/, nie w srodku" ;;
     Z07) petclinic "$p/spring-petclinic"
          krok "narzedzie regul, zebys mial czym sprawdzac"
          komenda mkdir -p "$p/spring-petclinic/tools"
          komenda cp tools/repo_policy.py "$p/spring-petclinic/tools/"
          krok "odcisk: sumy plikow testowych i lista zaleznosci ZANIM cokolwiek ruszysz"
          komenda uv run tools/repo_policy.py "$p/spring-petclinic" --zapisz-odcisk
-         ;;
+         GDZIE="$p/spring-petclinic" ;;
     Z08) handouty "$p" ;;
-    Z09) kata "$p"; petclinic "$p/spring-petclinic" ;;
-    Z10) petclinic "$p/spring-petclinic" ;;
-    Z11) template "$p" ;;
-    Z12) template "$p" ;;
+    Z09) kata "$p"; petclinic "$p/spring-petclinic"
+         PIERWSZA="czesc 1 (kata) robisz TUTAJ, czesc 2 w spring-petclinic/" ;;
+    Z10) petclinic "$p/spring-petclinic"; GDZIE="$p/spring-petclinic" ;;
+    Z11) template "$p"; GDZIE="$p/harness-template" ;;
+    Z12) template "$p"; GDZIE="$p/harness-template/scoring-worker" ;;
     *)   blad "Nie znam zadania '$z'. Sa Z01..Z12." ;;
   esac
 }
@@ -160,6 +171,9 @@ fi
 
 echo "Przygotowuje $ZAD:"
 przygotuj_zadanie "$ZAD"
-printf "\n${ZIELONY}Gotowe.${KONIEC} Pracuj w praca/%s/\n" "$ZAD"
-echo "Opis zadania: zadania/$ZAD*/README.md"
-echo
+
+printf "\n${ZIELONY}Gotowe.${KONIEC}\n\n"
+printf "  Pracujesz tutaj:  ${ZIELONY}%s${KONIEC}\n" "$GDZIE"
+printf "  Opis zadania:     zadania/%s*/README.md\n" "$ZAD"
+[ -n "$PIERWSZA" ] && printf "  Uwaga:            %s\n" "$PIERWSZA"
+printf "\n  cd %s\n\n" "$GDZIE"

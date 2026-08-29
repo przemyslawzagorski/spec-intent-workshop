@@ -24,6 +24,23 @@ MAVEN_DIR="apache-maven-$MAVEN_VERSION"
 echo "==> katalog narzedzi: $TOOLING"
 
 # --- JDK 25 (Temurin, portable) -------------------------------------------
+# Uwaga na system. Katalog jdk-25* moze zostac po bootstrapie zrobionym
+# w innym systemie - typowo: pobrane w PowerShellu, uruchamiane pod WSL.
+# Sama obecnosc katalogu nic nie znaczy, trzeba sprawdzic, czy to ten JDK.
+_pasuje_do_systemu() {
+  local kat="$1"
+  case "$(uname -s)" in
+    Linux*|Darwin*) [ ! -f "$kat/bin/java.exe" ] ;;
+    *)              [ -f "$kat/bin/java.exe" ]   ;;
+  esac
+}
+
+if compgen -G "$JDK_GLOB" > /dev/null &&    ! _pasuje_do_systemu "$(compgen -G "$JDK_GLOB" | head -1)"; then
+  echo "==> UWAGA: w .tooling/ lezy JDK dla innego systemu niz $(uname -s)."
+  echo "    Kasuje go i pobieram wlasciwy."
+  rm -rf $(compgen -G "$JDK_GLOB")
+fi
+
 if compgen -G "$JDK_GLOB" > /dev/null; then
   echo "==> JDK 25 juz jest, pomijam"
 else

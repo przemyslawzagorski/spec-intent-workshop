@@ -72,6 +72,24 @@ srodowisko() {
 sprawdz_env() {
   echo "Srodowisko:"
   srodowisko
+  # .tooling/ jest specyficzne dla systemu. Bootstrap zrobiony w PowerShellu
+  # zostawia windowsowy JDK, ktory pod WSL-em nie zadziala - a bootstrap.sh
+  # widzi katalog jdk-25* i pomija pobieranie. Latwo o tym nie wiedziec.
+  musi  "narzedzia pasuja do systemu" bash -c '
+      jdk=$(ls -d .tooling/jdk-25* 2>/dev/null | head -1)
+      [ -n "$jdk" ] || { echo "brak JDK w .tooling - uruchom bootstrap.sh"; exit 1; }
+      windowsowy=0; [ -f "$jdk/bin/java.exe" ] && windowsowy=1
+      case "$(uname -s)" in
+        Linux*|Darwin*) system=unix ;;
+        *)              system=windows ;;
+      esac
+      if [ "$system" = unix ] && [ "$windowsowy" = 1 ]; then
+        echo "W .tooling/ lezy JDK dla Windowsa, a jestes na $(uname -s)."
+        echo "Bootstrap zostal zrobiony w innym systemie niz ten, w ktorym pracujesz."
+        echo "Wybierz JEDNO srodowisko. Zeby przejsc na to:"
+        echo "    rm -rf .tooling && bash docs/setup/bootstrap.sh"
+        exit 1
+      fi'
   musi  "Java 25"            bash -c 'java -version 2>&1 | grep -qE "\"25[.\"]"'
   musi  "Maven"              bash -c 'mvn -v >/dev/null 2>&1'
   musi  "uv"                 bash -c 'uv --version >/dev/null 2>&1'
