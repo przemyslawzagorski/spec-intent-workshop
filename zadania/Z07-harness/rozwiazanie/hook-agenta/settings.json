@@ -1,0 +1,38 @@
+{
+  "_komentarz": [
+    "Konfiguracja hooków agenta dla Claude Code.",
+    "Kopiujesz to do .claude/settings.json w repo, w którym pracujesz,",
+    "a oba skrypty obok do .claude/hooks/.",
+    "",
+    "PreToolUse odpala się ZANIM narzędzie zrobi cokolwiek. Kod wyjścia 2",
+    "blokuje wywołanie, a stderr wraca do modelu jako wyjaśnienie.",
+    "",
+    "matcher to wyrażenie regularne na nazwie narzędzia. Edit i Write to",
+    "zmiany plików, Bash to komendy powłoki.",
+    "",
+    "Inne narzędzia (Copilot, Augment) mają własne mechanizmy i inną składnię.",
+    "Pomysł jest ten sam: przechwycić zamiar, zanim się wykona."
+  ],
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/blokuj-edycje-testow.sh"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/blokuj-obejscia.sh"
+          }
+        ]
+      }
+    ]
+  }
+}

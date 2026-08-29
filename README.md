@@ -111,7 +111,7 @@ i o czym pogadamy.
 
 | | Zadanie | Czas | Bramka |
 |---|---|---|---|
-| **[Z07](zadania/Z07-harness/)** | Harness — HARD i SOFT, odcisk testów, ta sama bramka w CI | 50 | tak |
+| **[Z07](zadania/Z07-harness/)** | Harness — HARD i SOFT, odcisk testów, red team, hooki agenta | 65 | tak |
 | **[Z08](zadania/Z08-agenci-krytyczni/)** | Agenci krytyczni — trzy błędy z przepisania Buna | 50 | — |
 | **[Z09](zadania/Z09-legacy-porty-adaptery/)** | Legacy za siatką → porty i adaptery | 55 | tak |
 | **[Z10](zadania/Z10-docker/)** | Docker — warstwy, rozmiar, healthcheck | 50 | tak |

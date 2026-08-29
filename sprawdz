@@ -246,6 +246,17 @@ Z07() {
       grep -qiE 'hard|soft|twarde|miekk' '$p/bramka'"
   warto "CI wola te sama bramke"  bash -c "
       grep -rqE '\./bramka' '$p'/.github/workflows/ '$p'/.gitlab-ci.yml 2>/dev/null"
+  # Krok 4: hook agenta lapie ZANIM edycja sie wydarzy - inaczej niz bramka,
+  # ktora oglada skutki. Nie kazde narzedzie to ma, wiec SOFT.
+  warto "jest hook agenta"  bash -c "
+      ls '$p'/.claude/hooks/*.sh >/dev/null 2>&1 ||
+      { echo 'brak .claude/hooks/ - krok 4 w zadaniu'; exit 1; }"
+  warto "hook agenta naprawde odmawia"  bash -c "
+      h=\$(ls '$p'/.claude/hooks/*.sh 2>/dev/null | head -1)
+      test -n \"\$h\" || exit 1
+      echo '{\"tool_input\":{\"file_path\":\"/x/src/test/java/A.java\"}}' |
+        bash \"\$h\" >/dev/null 2>&1 && { echo 'hook przepuscil edycje testu'; exit 1; }
+      exit 0"
   podsumuj
 }
 

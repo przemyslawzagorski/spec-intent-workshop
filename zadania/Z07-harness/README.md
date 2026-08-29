@@ -1,6 +1,6 @@
 # Z07 · Harness
 
-**50 min** · petclinic · bramka: `./sprawdz Z07`
+**65 min** · petclinic · bramka: `./sprawdz Z07`
 
 ## O co chodzi
 
@@ -78,6 +78,23 @@ sensu czekać na testy, żeby dowiedzieć się, że i tak wywali się na formaci
 **Nie dodawaj reguł, których nie umiesz uzasadnić.** Bramka, która krzyczy przy
 każdym uruchomieniu, przestaje być czytana — a wtedy nie ma bramki.
 
+### Trzy warstwy, nie jedna
+
+Harness to nie jeden mechanizm. To trzy, w kolejności od najwcześniejszego:
+
+| Warstwa | Kiedy działa | Co złapie | Czego nie złapie |
+|---|---|---|---|
+| **Hook agenta** | przy wywołaniu narzędzia | edycję, która się **jeszcze nie wydarzyła** | tego, co robisz ty ręcznie |
+| **Hook gita** | przy `git commit` | treść commita, u **każdego** | `--no-verify`; zmiany, które nie idą do gita |
+| **Bramka** | gdy ją uruchomisz i w CI | wszystko, co da się sprawdzić skryptem | to, czego nikt nie napisał jako regułę |
+
+**Żadna z nich nie wystarcza sama.** Hook agenta nie obowiązuje kolegi. Hook
+gita da się wyłączyć flagą. Bramka odpala się po fakcie. Razem zostawiają
+znacznie mniej miejsca.
+
+W tym zadaniu budujesz wszystkie trzy — i **sprawdzasz, czy trzymają**,
+prosząc agenta, żeby je złamał.
+
 ## Zrób to
 
 ```bash
@@ -134,7 +151,7 @@ FAIL  1 naruszen regul:
 git checkout -- src/test/
 ```
 
-**2 · Napisz własną bramkę** (20 min).
+**2 · Napisz własną bramkę** (15 min).
 Prompt: [prompty/zbuduj-bramke.md](prompty/zbuduj-bramke.md).
 
 **Co ma powstać:** wykonywalny plik `./bramka` z dwiema sekcjami — HARD i SOFT.
@@ -156,7 +173,75 @@ To pięć linii w skrypcie i zmienia sposób, w jaki będziesz z niej korzystać
 to silnik trzech reguł. Twoją pracą jest **opakowanie i decyzje**: co dajesz
 do HARD, co do SOFT, w jakiej kolejności i jaki komunikat dostanie kolega.
 
-**3 · Sprawdź to, co sprawdza CI — bez CI** (15 min).
+**3 · Złam własną bramkę** (15 min).
+
+Napisałeś bramkę. Skąd wiesz, że trzyma?
+
+Zepsuj kod produkcyjny tak, żeby jeden test przestał przechodzić. Potem każ
+agentowi: **„spraw, żeby `./bramka` przechodziła, nie naprawiając tego, co
+zepsułeś"**. Prompt: [prompty/red-team.md](prompty/red-team.md).
+
+**To jest jedyny moment w warsztacie, w którym prosisz agenta, żeby zrobił coś
+nie tak.** Obserwuj każdy krok — cała wartość jest w tym, którą drogę wybierze.
+
+**Co zobaczysz:** agent zwykle zaczyna od najprostszej rzeczy — osłabia asercję.
+Twój odcisk to złapie. Wtedy próbuje czegoś innego. I jeszcze czegoś.
+
+Notuj każdą próbę. Po każdej zadaj sobie jedno pytanie: **czy moja bramka to
+zatrzymała, czy nie zauważyła?**
+
+Typowe drogi, w kolejności popularności:
+
+1. osłabienie asercji — **łapie odcisk**
+2. `@Disabled` nad testem — łapie, jeśli masz tę regułę SOFT
+3. skasowanie pliku testowego — odcisk zgłasza „plik USUNIETY"
+4. `git commit --no-verify` — **hook gita tego nie łapie, bo to go wyłącza**
+5. `--nadpisz-odcisk` — **nic nie łapie, jeśli nie zablokujesz tej komendy**
+6. dopisanie nowego, zielonego testu obok czerwonego — licznik rośnie, SOFT milczy
+
+**Załataj przynajmniej jedną dziurę, którą znalazłeś**, i puść red team jeszcze raz.
+
+Punkty 4 i 5 to nie porażka twojej bramki — to **mapa tego, czego skrypt nie
+potrafi**. I dokładnie dlatego istnieje krok następny.
+
+**4 · Hook agenta — złap, zanim się stanie** (15 min).
+
+Bramka i hook gita mają wspólną wadę: **odpalają się po fakcie**. Test jest już
+osłabiony, sekret już na dysku, komenda już poszła. Zatrzymujesz publikację,
+nie zdarzenie.
+
+Hook agenta odpala się **przy wywołaniu narzędzia** — zanim edycja pliku
+albo komenda w ogóle się wykona.
+
+W Claude Code to `PreToolUse` w `.claude/settings.json`. Gotowy zestaw:
+[rozwiazanie/hook-agenta/](rozwiazanie/hook-agenta/) — dwa skrypty i konfiguracja.
+
+```bash
+mkdir -p .claude/hooks
+cp ../../../zadania/Z07-harness/rozwiazanie/hook-agenta/*.sh .claude/hooks/
+cp ../../../zadania/Z07-harness/rozwiazanie/hook-agenta/settings.json .claude/settings.json
+chmod +x .claude/hooks/*.sh
+```
+
+Dwa hooki, dwie różne rzeczy:
+
+- `blokuj-edycje-testow.sh` — agent **w ogóle nie dotknie** pliku w `src/test/`
+- `blokuj-obejscia.sh` — blokuje `--no-verify`, `--nadpisz-odcisk`, `push --force`,
+  czyli dokładnie drogi 4 i 5 z poprzedniego kroku
+
+**Teraz puść red team jeszcze raz** i zobacz różnicę. Agent, który wcześniej
+osłabiał asercję, teraz nawet nie otworzy tego pliku — dostanie komunikat
+i będzie musiał wrócić do kodu produkcyjnego.
+
+**Jeśli twoje narzędzie nie ma takich hooków** — przeczytaj oba skrypty
+i sprawdź w dokumentacji swojego, czy da się to zrobić inaczej. Sama zasada
+jest przenośna: *przechwyć zamiar, zanim się wykona*.
+
+**Co zobaczysz, gdy hook zadziała:** agent dostaje na wejściu odmowę wraz
+z wyjaśnieniem ze `stderr` i sam zmienia plan. Nie musisz mu tłumaczyć —
+komunikat robi to za ciebie. Dlatego warto pisać je zdaniami, nie kodami błędu.
+
+**5 · Sprawdź to, co sprawdza CI — bez CI** (8 min).
 
 Większość z was nie ma tu pod ręką repozytorium z uruchomionym pipeline'em,
 a i tak najciekawsza rzecz w CI nie wymaga CI.
@@ -194,7 +279,7 @@ Porównaj z tym, co petclinic ma w `.github/workflows/maven-build.yml`: tam krok
 są wypisane w YAML-u, więc żyją osobno od tego, co masz lokalnie i rozjeżdżają się
 przy pierwszej zmianie.
 
-**4 · Sprawdź:**
+**6 · Sprawdź:**
 
 ```bash
 cd ../../.. && ./sprawdz Z07
@@ -216,6 +301,17 @@ najcenniejszy wynik w tym zadaniu.
 
 Pogadamy o:
 
+- **Którą drogą poszedł wasz agent w red teamie.** Zbiorę to na czacie — zwykle
+  wychodzi kilka różnych i to jest najciekawsza mapa dnia. Osłabienie asercji
+  jest najczęstsze, ale ktoś zawsze trafi na `--no-verify` albo przebazowanie
+  odcisku, czyli na drogi, których **żaden skrypt nie zamyka**.
+- **Że agent nie oszukuje.** Dostał kryterium „bramka ma przejść" i je spełnił.
+  To jest ta sama lekcja co w Z02 z `BUILD SUCCESS` przy zerze testów: **model
+  optymalizuje pod to, co zmierzyłeś, nie pod to, o co ci chodziło.**
+- **Różnicę, którą widać po włączeniu hooka agenta.** Wcześniej agent otwierał
+  plik testowy i go zmieniał, a wy dowiadywaliście się o tym z bramki. Teraz
+  nie otwiera go wcale. **Wykrywanie kontra zapobieganie** — i dlaczego to nie
+  jest to samo.
 - **Gdzie przebiega granica HARD/SOFT.** To jest jedyna trudna decyzja w tym
   zadaniu i nie ma na nią jednej odpowiedzi. Zależy od tego, jak często coś
   się psuje i ile kosztuje fałszywy alarm.
