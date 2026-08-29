@@ -16,7 +16,7 @@ Kafka, Postgres, bramka, CI — do zabrania i użycia u siebie.
 Zrób to w domu, nie na sali.
 
 ```bash
-git clone <adres-repo>
+git clone https://github.com/przemyslawzagorski/spec-intent-workshop.git
 cd spec-intent-workshop
 bash docs/setup/bootstrap.sh
 source .tooling/env.sh
