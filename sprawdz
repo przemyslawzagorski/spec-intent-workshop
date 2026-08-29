@@ -148,7 +148,20 @@ Z01() {
   musi  "jest AGENTS.md"                test -f "$p/AGENTS.md"
   musi  "AGENTS.md miesci sie w 2 KB"   bash -c "
       [ -f '$p/AGENTS.md' ] && [ \$(wc -c < '$p/AGENTS.md') -le 2048 ]"
-  musi  "hook jest wykonywalny"         test -x "$p/.git/hooks/pre-commit"
+  # Najczestszy blad w tym zadaniu: hook laduje w korzeniu warsztatu zamiast
+  # w piaskownicy. Komunikat musi powiedziec GDZIE szukamy, bo inaczej czlowiek
+  # widzi "BRAK" przy hooku, ktory przed chwila u niego zadzialal.
+  musi  "hook jest wykonywalny" bash -c "
+      test -x '$p/.git/hooks/pre-commit' && exit 0
+      echo 'szukam w: $p/.git/hooks/pre-commit'
+      if test -x .git/hooks/pre-commit; then
+        echo 'ZNALAZLEM go w korzeniu warsztatu (.git/hooks/pre-commit).'
+        echo 'To nie tam - hook ma trafic do klona petclinica, nie do repo warsztatu.'
+        echo 'Napraw:  cp .git/hooks/pre-commit $p/.git/hooks/  &&  chmod +x $p/.git/hooks/pre-commit'
+      else
+        echo 'Nie ma go tez w korzeniu. Wroc do kroku 4 w zadaniu.'
+      fi
+      exit 1"
   # Hook, ktory nie blokuje, nie jest hookiem. Podsuwamy mu DWA rodzaje sekretu:
   # klucz AWS i klucz prywatny. Ten drugi jest wazny, bo jego wzorzec zaczyna sie
   # od myslnika - grep bez `--` bierze go za flage i cicho nic nie sprawdza.

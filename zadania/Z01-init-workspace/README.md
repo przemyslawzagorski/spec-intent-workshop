@@ -55,26 +55,125 @@ treści.
 **Rzeczy krytyczne dawaj do hooka.** „Nie commituj kluczy API" w pliku reguł to
 prośba. W `pre-commit` to blokada.
 
+## Dwa różne hooki — i to nie jest to samo
+
+Zanim zaczniesz: w świecie agentów słowo „hook" znaczy **dwie różne rzeczy**
+i mylenie ich kosztuje.
+
+| | **Hook gita** | **Hook agenta** |
+|---|---|---|
+| Gdzie mieszka | `.git/hooks/` w jednym repo | konfiguracja narzędzia (`settings.json`) |
+| Kiedy się odpala | przy operacji gita — commit, push | przy **wywołaniu narzędzia** przez agenta |
+| Co widzi | to, co idzie do commita | komendę, plik, argumenty — **zanim się wykonają** |
+| Kogo obowiązuje | **każdego**, kto commituje w tym repo | tylko tego agenta |
+| Jak łatwo obejść | `git commit --no-verify` | trudniej — agent nie kontroluje swojej konfiguracji |
+
+**W tym zadaniu budujesz hook gita.** To jest właściwy wybór na start, bo:
+
+- **działa na wszystkich naraz** — na tobie, na koledze i na agencie.
+  Kiedy agent uruchomi `git commit`, dostanie dokładnie ten sam komunikat co ty;
+- **jest przenośny** — nie zależy od tego, czy zespół używa Claude Code,
+  Copilota czy niczego;
+- **jedno miejsce, jedna reguła.**
+
+**Ale ma dwie dziury, o których trzeba wiedzieć:**
+
+**1 · Odpala się za późno.** Sekret jest już na dysku, już w katalogu roboczym,
+a często już w poprzednim commicie. Hook gita zatrzymuje **publikację**,
+nie **powstanie**.
+
+**2 · `--no-verify` go wyłącza.** Jedna flaga. Agent, który utknie w pętli
+naprawczej i zobaczy blokadę, ma spore szanse jej użyć — bo formalnie spełnia
+polecenie „zrób commit".
+
+**Tu wchodzą hooki agenta.** Odpalają się na **wywołaniu narzędzia**, czyli
+zanim komenda w ogóle pójdzie do powłoki. W Claude Code konfiguruje się je
+w `settings.json`, zdarzenie `PreToolUse`. Przykład, który domyka dziurę numer 2:
+
+```json
+{
+  "hooks": {
+    "PreToolUse": [{
+      "matcher": "Bash",
+      "hooks": [{
+        "type": "command",
+        "command": "grep -q -- '--no-verify' <<< \"$CLAUDE_TOOL_INPUT\" && { echo 'Nie obchodzimy hookow gita.' >&2; exit 2; } || exit 0"
+      }]
+    }]
+  }
+}
+```
+
+Kod wyjścia `2` blokuje wywołanie, a tekst ze `stderr` wraca do modelu jako
+wyjaśnienie. Inne narzędzia mają własne mechanizmy — Copilot i Augment
+konfiguruje się inaczej, ale **pomysł jest ten sam**.
+
+**Wniosek, który warto zapamiętać:**
+
+> Hook gita pilnuje **repozytorium**. Hook agenta pilnuje **agenta**.
+> Potrzebujesz obu, jeśli agent commituje w twoim imieniu — a commituje.
+
+Do tego jest trzeci poziom, który zobaczysz w Z07: **bramka**, czyli skrypt
+uruchamiany świadomie przed commitem i w CI. Hook jest odruchem, bramka jest decyzją.
+
 ## Zrób to
+
+> **Jedna rzecz, przez którą najwięcej osób się potyka:** w tym zadaniu
+> pracujesz **w klonie petclinica**, nie w repo warsztatu. Instalacja skilli
+> to jedyny wyjątek — dlatego robimy ją najpierw, zanim w ogóle wejdziesz
+> do piaskownicy.
+>
+> Jeśli w którymś momencie zgubisz się, gdzie jesteś — `pwd`.
+
+### Krok 1 · Zainstaluj skille (3 min) — **w korzeniu warsztatu**
+
+Instalator zapisuje skille do `.agents/skills/` **bieżącego katalogu**.
+Uruchomiony w piaskownicy zostawi je w katalogu, który zaraz skasujesz.
+
+```bash
+npx skills@latest add mattpocock/skills -s grilling -s domain-modeling -s codebase-design -s tdd -s writing-for-agents
+```
+
+**Co zobaczysz:** listę skilli i przy każdym, na jakie narzędzia poszły —
+*„universal: GitHub Copilot, Amp, Cline…"*, a dla Claude Code *„symlinked"*.
+Powstaną dwa katalogi: `.agents/skills/` z plikami i `.claude/skills/`
+z dowiązaniami.
+
+Na końcu: *„Review skills before use; they run with full agent permissions."*
+**Potraktuj to poważnie** — to tekst, który wleci do twoich promptów.
+
+**Otwórz któryś `SKILL.md`.** Zwykły markdown: nagłówek z nazwą i opisem,
+pod nim instrukcja. Nic więcej — żadnego kodu, żadnego API.
+
+Dwie pułapki:
+
+- forma `-s a,b,c` po przecinku **nie działa** — każdy skill ma własną flagę `-s`,
+- **nie instaluj jednocześnie wtyczką i przez `npx`** (`claude plugins install
+  mattpocock-skills` to ta druga droga) — dostaniesz każdy skill podwójnie.
+
+**Nie masz skilli w swoim narzędziu?** Otwierasz `SKILL.md` i wklejasz treść
+jako prompt. Efekt ten sam. Więcej: [docs/skille.md](../../docs/skille.md).
+
+### Krok 2 · Wejdź do piaskownicy i rozejrzyj się (3 min)
 
 ```bash
 ./przygotuj Z01
 cd praca/Z01/spring-petclinic
 ```
 
-**Co zobaczysz:** kilka szarych linii z komendami, które skrypt wykonał,
-i na końcu `Gotowe. Pracuj w praca/Z01/`. Trwa to 5 sekund.
-Jeśli chcesz wiedzieć, co dokładnie robi — `./przygotuj Z01 --pokaz`.
+**Co zobaczysz:** kilka szarych linii z komendami i `Gotowe. Pracuj w praca/Z01/`.
+Trwa 5 sekund. Chcesz wiedzieć dokładnie, co robi — `./przygotuj Z01 --pokaz`.
 
-**1 · Rozejrzyj się** (3 min). Zobacz `pom.xml`, jeden kontroler, jeden test.
-Nie czytaj wszystkiego — potrzebujesz tylko tyle, żeby napisać sensowne reguły.
+**Od tego momentu wszystko dzieje się tutaj.** Zobacz `pom.xml`, jeden kontroler,
+jeden test. Nie czytaj wszystkiego — tylko tyle, żeby napisać sensowne reguły.
 
-**2 · Napisz `AGENTS.md`.** Możesz poprosić agenta, ale przeczytaj, co napisał.
-Prompt masz w [prompty/reguly.md](prompty/reguly.md).
+### Krok 3 · Napisz `AGENTS.md` (10 min)
 
-Jeśli zainstalowałeś skille (krok 3 — możesz go zrobić najpierw), to jest
-dokładnie zadanie dla **`writing-for-agents`**. Jego opis brzmi:
-*„Use when creating or editing skills, or modifying AGENTS.md or CLAUDE.md"*.
+Możesz poprosić agenta, ale **przeczytaj, co napisał**.
+Prompt: [prompty/reguly.md](prompty/reguly.md).
+
+Masz skille? To jest dokładnie zadanie dla **`writing-for-agents`** — jego opis
+brzmi *„Use when creating or editing skills, or modifying AGENTS.md or CLAUDE.md"*.
 
 Wymagania:
 
@@ -83,51 +182,20 @@ Wymagania:
 - ma sekcję „jak uruchamiać" z komendami, które naprawdę działają,
 - ma sekcję „czego nie zakładać".
 
-**3 · Zainstaluj skille** (3 min).
+### Krok 4 · Wstaw hook (5 min)
 
-> **Zrób to w korzeniu warsztatu, nie w piaskownicy.** Instalator zapisuje
-> skille do `.agents/skills/` **bieżącego katalogu**. Jeśli uruchomisz go
-> w `praca/Z01/spring-petclinic`, wylądują w katalogu, który skasujesz przy
-> `./przygotuj Z01 --od-nowa`, i nie będzie ich w pozostałych zadaniach.
+**Uwaga: hook trafia do klona petclinica, nie do repo warsztatu.** Każde repo
+git ma własne `.git/hooks/` i nie dziedziczą po sobie.
 
-```bash
-cd ../../..     # do korzenia warsztatu
-npx skills@latest add mattpocock/skills -s grilling -s domain-modeling -s codebase-design -s tdd -s writing-for-agents
-cd praca/Z01/spring-petclinic
-```
-
-**Co zobaczysz:** listę zainstalowanych skilli i przy każdym, na jakie narzędzia
-poszły — *„universal: GitHub Copilot, Amp, Cline…"*, a dla Claude Code
-*„symlinked"*. Powstaną dwa katalogi: `.agents/skills/` z plikami
-i `.claude/skills/` z dowiązaniami.
-
-Na końcu instalator napisze: *„Review skills before use; they run with full
-agent permissions."* **Potraktuj to poważnie** — to jest tekst, który wleci
-do twoich promptów.
-
-**Otwórz któryś `SKILL.md`.** To zwykły markdown: nagłówek z nazwą i opisem,
-pod nim instrukcja. Nic więcej. Żadnego kodu, żadnego API.
-
-Dwie rzeczy, o które ludzie się potykają:
-
-- forma `-s a,b,c` po przecinku **nie działa** — każdy skill ma własną flagę `-s`,
-- **nie instaluj jednocześnie wtyczką i przez `npx`** (`claude plugins install
-  mattpocock-skills` to ta druga droga) — dostaniesz każdy skill podwójnie.
-
-**Jeśli twoje narzędzie nie ma skilli — nic nie szkodzi.** Otwierasz `SKILL.md`
-i wklejasz treść jako prompt. Efekt jest ten sam.
-
-Więcej — w tym które skille działają od ręki, a które najpierw chcą konfiguracji
-repo: [docs/skille.md](../../docs/skille.md).
-
-**4 · Wstaw hook.** Napisz sam albo weź gotowy:
+Sprawdź, gdzie jesteś, zanim skopiujesz:
 
 ```bash
+pwd          # ma się kończyć na praca/Z01/spring-petclinic
 cp ../../../zadania/Z01-init-workspace/rozwiazanie/pre-commit .git/hooks/pre-commit
 chmod +x .git/hooks/pre-commit
 ```
 
-**5 · Sprawdź, że hook naprawdę blokuje:**
+### Krok 5 · Sprawdź, że hook naprawdę blokuje (5 min)
 
 ```bash
 echo 'AWS_SECRET=AKIAIOSFODNN7EXAMPLE' > test.txt
@@ -155,9 +223,12 @@ git reset test.txt test2.txt && rm -f test.txt test2.txt
 cd ../../.. && ./sprawdz Z01
 ```
 
-**Co zobaczysz:** sześć linii, każda zaczyna się od `jest` albo `BRAK`,
+**Co zobaczysz:** siedem linii, każda zaczyna się od `jest` albo `BRAK`,
 a na końcu `Gotowe.` Linia `uwaga sa zainstalowane skille` jest w porządku,
 jeśli nie instalowałeś skilli — to uwaga, nie błąd.
+
+Jeśli dostaniesz `BRAK hook jest wykonywalny`, bramka powie ci, **gdzie szukała
+i gdzie znalazła** twój hook. Najczęściej wylądował w korzeniu warsztatu.
 
 ## Pytanie na czat
 
@@ -174,7 +245,14 @@ Rzeczy, o których pogadamy:
 - **Reguły, które nic nie robią.** „Pisz czysty kod", „stosuj dobre praktyki",
   „bądź dokładny". Kosztują tokeny przy każdym zapytaniu i nie zmieniają nic.
   Jak sprawdzić, czy reguła działa: usuń ją i zobacz, czy coś się zmieniło.
-- **Reguła kontra hook.** Która z waszych reguł powinna być hookiem?
+- **Reguła kontra hook kontra hook agenta.** Która z waszych reguł powinna być
+  hookiem gita, a która hookiem agenta? Podpowiedź: wszystko, co dotyczy
+  **treści commita**, to git. Wszystko, co dotyczy **komend, które agent
+  uruchamia**, to hook agenta — bo do gita nigdy nie dotrze.
+- **Że agent też trafia na ten hook.** Kiedy uruchomi `git commit`, dostanie
+  dokładnie ten sam komunikat co wy. To jest zaleta, nie efekt uboczny —
+  jedna reguła, wszyscy jej podlegają. Ale ma flagę `--no-verify` i po paru
+  nieudanych próbach potrafi po nią sięgnąć.
 - **Format hooka.** Mój blokuje sekrety. Można też blokować commit z czerwonymi
   testami — ale wtedy commit trwa 84 sekundy i po tygodniu wszyscy dopiszą
   `--no-verify` do aliasu. **Hook, który za dużo blokuje, zostaje wyłączony.**
@@ -197,6 +275,8 @@ dziesiątej sesji — poniżej tego progu po prostu wklej, co trzeba, do promptu
 | **Napisz własny skill** | Weź czynność, którą powtarzasz w swoim projekcie, i zapisz jako `SKILL.md`. Uruchom. Poznasz format od środka. | 25 |
 | **Porównaj formaty** | `AGENTS.md`, `.cursorrules`, `copilot-instructions.md` — co przetrwa zmianę narzędzia, a co trzeba pisać od nowa. | 15 |
 | **Twardszy hook** | Dołóż blokadę commita, który zmienia plik testowy i plik produkcyjny naraz. Zdecyduj świadomie, czy to ma być HARD czy SOFT. | 20 |
+| **Hook agenta, nie gita** | Skonfiguruj w swoim narzędziu hook na wywołanie narzędzia (w Claude Code: `PreToolUse` w `settings.json`) i zablokuj `git commit --no-verify`. Potem **spróbuj namówić agenta, żeby to obszedł** — i zobacz, co zrobi. | 25 |
+| **Porównaj zasięg** | Ten sam zakaz raz jako hook gita, raz jako hook agenta. Który złapie `rm -rf`? Który złapie zapis sekretu do pliku, którego nigdy nie zacommitujesz? | 20 |
 
 ## Rozwiązanie
 

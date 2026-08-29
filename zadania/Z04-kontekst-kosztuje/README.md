@@ -26,6 +26,58 @@ Konkretnie na petclinicu: całe repo to ~357 000 tokenów, z czego **67% to font
 CSS i obrazki**. Największy pojedynczy plik to webfont w SVG na 378 KB — czyli
 jakieś 95 000 tokenów ścieżek wektorowych. Java to 9,7% całości.
 
+## Kontekst to nie tylko pliki z kodem
+
+To jest część, o której się nie myśli, bo jej nie widać. W promptcie siedzi
+znacznie więcej niż to, co świadomie wkleiłeś:
+
+| Co | Ile mniej więcej | Czy o tym pamiętasz |
+|---|---|---|
+| **Definicje narzędzi** — każde narzędzie agenta ma schemat JSON | 100–400 tokenów **za narzędzie** | prawie nigdy |
+| **Serwery MCP** — każdy dokłada wszystkie swoje narzędzia | serwer z 20 narzędziami to kilka tysięcy tokenów | nie |
+| **Plik reguł** — `AGENTS.md`, `CLAUDE.md`, `.cursorrules` | tyle, ile napisałeś | tak, ale rzadko liczysz |
+| **Nagłówki skilli** — nazwa i opis każdego zainstalowanego | kilkadziesiąt za skill | nie |
+| **Prompt systemowy narzędzia** | kilka tysięcy | nie masz na to wpływu |
+| **Historia rozmowy** | rośnie z każdą turą | czujesz dopiero, gdy zwolni |
+| **Pliki, które wkleiłeś** | to, co widzisz | tak |
+
+**Najdroższa pozycja to zwykle ta, o której nie wiesz.** Podpinasz serwer MCP
+do bazy, bo raz potrzebowałeś schematu — i od tej pory **każde** zapytanie,
+także „popraw literówkę w README", niesie ze sobą opis dwudziestu narzędzi,
+z których nie korzystasz.
+
+### Efekt kuli śnieżnej
+
+Te rzeczy się nie sumują — one się **mnożą przez liczbę tur**.
+
+Model nie pamięta rozmowy; przy każdej turze dostaje ją całą od nowa. Więc
+narzędzia, reguły i historia lecą **za każdym razem**:
+
+```
+tura 1:  narzędzia + reguły + pytanie
+tura 2:  narzędzia + reguły + tura 1 + pytanie
+tura 3:  narzędzia + reguły + tura 1 + tura 2 + pytanie
+...
+```
+
+Stąd dwa wnioski, których nie widać z pojedynczego zapytania:
+
+- **Kilkaset tokenów na starcie to kilkadziesiąt tysięcy po dwudziestu turach.**
+  Cache to znacznie tanieje, ale **uwagi modelu nie da się scache'ować** —
+  im dłuższy kontekst, tym mocniej działa *lost in the middle*.
+- **Rozmowa, która „głupieje" po godzinie**, zwykle nie głupieje. Ona się zatkała.
+  Dlatego `/clear` bywa skuteczniejszy od trzech kolejnych doprecyzowań.
+
+### Co z tym zrobić — trzy rzeczy, które faktycznie działają
+
+1. **Odłączaj serwery MCP, których nie używasz w tym zadaniu.** To jest
+   najtańsza oszczędność, jaka istnieje: jedno kliknięcie, zero utraconej jakości.
+   Wracamy do tego w bonusie [B3](../../bonusy/B3-mcp/).
+2. **Trzymaj plik reguł mały** — Z01. Nie dlatego, że 2 KB to dużo, tylko
+   dlatego, że mnoży się przez każdą turę każdego dnia.
+3. **Zaczynaj nową sesję do nowego zadania.** Historia poprzedniego zadania
+   nie pomaga w następnym, a kosztuje przy każdej turze.
+
 ## Dwa mechanizmy, które trzeba znać
 
 ### Cache — płacisz raz za to, co się nie zmienia
@@ -242,6 +294,8 @@ niż się nam wydaje.
 | **Lost in the middle na żywo** | Weź prompt z podejścia A. Przenieś polecenie z końca na sam środek, między pliki. Zadaj to samo pytanie. Porównaj odpowiedź. | 15 |
 | **Zabij sobie cache** | Wstaw aktualny czas na początku promptu i zrób trzy zapytania. Potem to samo z czasem na końcu. Porównaj koszt wejścia — jeśli twoje narzędzie go pokazuje. | 15 |
 | **Policz swój koszt** | Rozmiar `AGENTS.md` × liczba twoich interakcji dziennie × 250 dni roboczych. Czy któraś reguła jest tego warta? | 10 |
+| **Zmierz koszt narzędzi** | Sprawdź w swoim narzędziu, ile tokenów zajmują same definicje narzędzi i serwery MCP (w Claude Code: `/context`). Odłącz serwer, którego dziś nie używasz, i zmierz jeszcze raz. | 15 |
+| **Kula śnieżna na żywo** | Zadaj to samo pytanie w świeżej sesji i po dwudziestu turach rozmowy o czymś innym. Porównaj jakość odpowiedzi, nie tylko koszt. | 20 |
 | **Trzy modele** | To samo pytanie, ten sam kontekst, trzy modele. Kiedy słabszy wystarcza? | 25 |
 | **Repo, które się nie mieści** | Wymyśl trzy strategie dla repo na 5 mln tokenów i wypisz koszt każdej: mapa plików, wyszukiwanie, indeks wektorowy. | 20 |
 
