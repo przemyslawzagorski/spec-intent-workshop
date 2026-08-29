@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://spec-intent-workshop/events/return-scored.schema.json",
+  "title": "return.scored",
+  "description": "Odpowiedz scoring-workera. Minimalna - niesie tylko to, czego returns-service nie umie policzyc sam.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["returnId", "abuseScore"],
+  "properties": {
+    "returnId":   { "type": "string", "format": "uuid" },
+    "abuseScore": { "type": "number", "minimum": 0, "maximum": 1 }
+  }
+}

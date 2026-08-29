@@ -1,0 +1,30 @@
+# Polityka zwrotów — wartości, na których działa ten system.
+# To jedyny plik, który zmieniasz, gdy chcesz inne progi i okna.
+# Kod nie zmienia się wcale — testy generują się z tych wartości.
+# Waliduje się względem docs/contract/return-policy.schema.json
+version: 1
+
+windows:
+  default: 14
+  elektronika: 30
+  akcesoria: 14
+
+excludedCategories:
+  - oprogramowanie-cyfrowe
+
+partialReturnAllowed: true
+
+manualReviewAboveAmount: 2000.0
+
+abuse:
+  windowDays: 90
+  reviewAt: 0.3
+  rejectAt: 0.6
+
+shipping:
+  paidBy:
+    DAMAGED: MERCHANT
+    WRONG_ITEM: MERCHANT
+    NOT_AS_DESCRIBED: MERCHANT
+    CHANGED_MIND: CUSTOMER
+    OTHER: CUSTOMER

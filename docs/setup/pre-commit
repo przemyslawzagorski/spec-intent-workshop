@@ -1,0 +1,45 @@
+#!/usr/bin/env bash
+# Hook blokujacy - odrzuca commit, ktory lamie reguly z AGENTS.md.
+#
+# INSTALACJA (M7, krok 7.4):
+#     cp docs/setup/pre-commit .git/hooks/pre-commit
+#     chmod +x .git/hooks/pre-commit
+#
+# DLACZEGO ZWYKLY HOOK, A NIE HOOK CLAUDE CODE:
+# Istnieje skill `git-guardrails-claude-code` (mattpocock), ktory ustawia hooki
+# w Claude Code blokujace niebezpieczne komendy gita. Jest dobry - i dziala
+# tylko w Claude Code. Ten plik dziala u kazdego: w Copilocie, w Augmencie,
+# w IntelliJ i u kolegi, ktory w ogole nie uzywa AI.
+#
+# To ta sama zasada co AGENTS.md kontra pliki per narzedzie: jedno zrodlo regul,
+# najnizsza wspolna warstwa.
+#
+# Hook mozna pominac przez `git commit --no-verify`. To jest CELOWE.
+# Hook ma przypominac, a nie wiezic - twarda bramka jest w CI, gdzie nikt
+# nie doda `--no-verify`.
+set -uo pipefail
+
+ROOT="$(git rev-parse --show-toplevel)"
+cd "$ROOT"
+
+SERWIS="workshop/returns-service"
+[ -d "$SERWIS" ] || exit 0                      # nic do sprawdzenia
+
+echo "pre-commit: reguly z AGENTS.md..."
+
+if ! uv run tools/repo_policy.py "$SERWIS"; then
+  cat <<'KONIEC'
+
+  Commit zatrzymany.
+
+  Powyzsze naruszenia lamia reguly zapisane w AGENTS.md. Napraw je albo -
+  jesli naprawde uwazasz, ze regula jest zla - zmien AGENTS.md i opisz to
+  w ADR. Zmiana reguly jest w porzadku. Ciche jej obejscie nie jest.
+
+  Swiadomie i jednorazowo:  git commit --no-verify
+
+KONIEC
+  exit 1
+fi
+
+echo "pre-commit: OK"

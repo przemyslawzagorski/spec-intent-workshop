@@ -1,0 +1,95 @@
+#!/usr/bin/env bash
+#
+# ./bramka — jedna komenda, ktora mowi, czy to repo jest zdrowe.
+#
+# Nie ma drugiej wersji tej bramki. To, co uruchamiasz u siebie, jest
+# doslownie tym samym plikiem, ktory uruchamia CI. Gdyby byly dwie wersje,
+# rozjechalyby sie w tydzien i zaczelbys slyszec "u mnie dziala".
+#
+# Podzial na HARD i SOFT jest celowy:
+#   HARD  nie wpuszcze - zwracam kod bledu, CI staje
+#   SOFT  zwracam uwage - przeczytaj, ale przepuszczam
+#
+# Maven bierze konfiguracje z MAVEN_ARGS, jesli ja ustawisz. Za firmowym
+# proxy: export MAVEN_ARGS="-s /sciezka/settings.xml"
+#
+set -uo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$ROOT"
+
+CZERWONY=$'\033[31m'; ZIELONY=$'\033[32m'; ZOLTY=$'\033[33m'
+SZARY=$'\033[2m'; KONIEC=$'\033[0m'
+BLEDY=0; UWAGI=0
+
+hard() {
+  local opis="$1"; shift
+  # Status przed etykieta: printf liczy bajty, a polskie znaki maja po dwa,
+  # wiec wyrownanie po etykiecie rozjezdza sie o liczbe diakrytykow.
+  if wynik=$("$@" 2>&1); then
+    printf "  ${ZIELONY}ok${KONIEC}     %s\n" "$opis"
+  else
+    BLEDY=$((BLEDY + 1)); printf "  ${CZERWONY}BLAD${KONIEC}   %s\n" "$opis"
+    echo "$wynik" | tail -15 | sed "s/^/         ${SZARY}/;s/$/${KONIEC}/"
+  fi
+}
+
+soft() {
+  local opis="$1"; shift
+  if wynik=$("$@" 2>&1); then
+    printf "  ${ZIELONY}ok${KONIEC}     %s\n" "$opis"
+  else
+    UWAGI=$((UWAGI + 1)); printf "  ${ZOLTY}uwaga${KONIEC}  %s\n" "$opis"
+    echo "$wynik" | tail -6 | sed "s/^/         ${SZARY}/;s/$/${KONIEC}/"
+  fi
+}
+
+echo
+echo "HARD - bez tego nie wpuszczam:"
+hard "polityka jest poprawna"        uv run tools/policy_check.py return-policy.yaml
+
+# Tabela przypadkow dla Javy POWSTAJE tutaj, przed testami. To nie jest
+# kosmetyka: gdyby lezala w repo jako plik statyczny, zmiana progu w polityce
+# nie zmienialaby niczego i cala teza "spec jako dane" bylaby sciema.
+#
+# Worker Pythona robi to inaczej - jego testy wolaja score_cases.py przez
+# subprocess w chwili uruchomienia (patrz scoring-worker/tests/test_abuse_score.py).
+# Dwa jezyki, dwa sposoby, ten sam efekt: nigdzie nie ma zapisanej na sztywno
+# liczby 30 ani 0.6.
+hard "tabela decyzji z aktualnej polityki" bash -c '
+    uv run tools/policy_cases.py return-policy.yaml > returns-service/src/test/resources/policy-cases.tsv'
+
+hard "returns-service: testy"        bash -c 'cd returns-service && mvn -B test'
+hard "scoring-worker: testy"         bash -c 'cd scoring-worker && POLICY_FILE=../return-policy.yaml uv run --group dev pytest -q'
+hard "control nie wie o HTTP"        bash -c '
+    ! grep -rq "jakarta.ws.rs" returns-service/src/main/java/*/*/*/control 2>/dev/null'
+
+echo
+echo "SOFT - zwracam uwage:"
+# Aplikacja czyta polityke z ../return-policy.yaml, a gdy jej nie znajdzie -
+# z zasobu na classpathie. Dwie kopie, ktore moga sie po cichu rozjechac:
+# zmieniasz korzen, a aplikacja w kontenerze bierze stara wartosc i nikt tego
+# nie zauwaza. Dlatego pilnujemy, zeby byly identyczne.
+soft "obie kopie polityki sa takie same" diff --strip-trailing-cr -q return-policy.yaml returns-service/src/main/resources/return-policy.yaml
+
+# Lista zaleznosci bierze sie z poma, nie z mojej pamieci. Regula, ktora
+# trzeba recznie aktualizowac, przestaje dzialac w drugim tygodniu.
+soft "kazda zaleznosc ma ADR"        bash -c '
+    nudne="quarkus-arc quarkus-junit quarkus-maven-plugin quarkus-rest-jsonb quarkus-smallrye-health quarkus-agroal"
+    brak=""
+    for a in $(grep -oE "<artifactId>quarkus-[a-z-]+</artifactId>" returns-service/pom.xml |
+               sed "s/<[^>]*>//g" | sort -u); do
+      case " $nudne " in *" $a "*) continue ;; esac
+      grep -rql "$a" docs/adr/ >/dev/null 2>&1 || brak="$brak $a"
+    done
+    [ -z "$brak" ] || { echo "brak ADR dla:$brak"; exit 1; }'
+
+echo
+if [ "$BLEDY" -eq 0 ]; then
+  printf "${ZIELONY}Bramka otwarta.${KONIEC}"
+else
+  printf "${CZERWONY}Bramka zamknieta.${KONIEC} %d rzeczy do naprawienia." "$BLEDY"
+fi
+[ "$UWAGI" -gt 0 ] && printf "  ${ZOLTY}(%d uwag)${KONIEC}" "$UWAGI"
+echo; echo
+exit $(( BLEDY > 0 ))

@@ -1,0 +1,28 @@
+# Obraz JVM dla returns-service.
+#
+# Dwuetapowy: pierwszy etap buduje, drugi zawiera tylko runtime. Dzieki temu
+# `docker compose up --build` dziala z czystego repozytorium - nie trzeba
+# wczesniej uruchamiac Mavena recznie.
+FROM maven:3.9-eclipse-temurin-25 AS build
+WORKDIR /build
+
+# Najpierw sam pom - warstwa z zaleznosciami cache'uje sie miedzy buildami,
+# dopoki pom sie nie zmieni. To ten sam pomysl co cache promptow z M10.2.
+COPY pom.xml .
+RUN mvn -B -q dependency:go-offline
+
+COPY src ./src
+RUN mvn -B -q package -DskipTests
+
+FROM eclipse-temurin:25-jre
+WORKDIR /work
+
+COPY --from=build /build/target/quarkus-app/lib/      ./lib/
+COPY --from=build /build/target/quarkus-app/*.jar     ./
+COPY --from=build /build/target/quarkus-app/app/      ./app/
+COPY --from=build /build/target/quarkus-app/quarkus/  ./quarkus/
+
+EXPOSE 8080
+USER 185
+ENV JAVA_OPTS_APPEND="-Dquarkus.http.host=0.0.0.0"
+ENTRYPOINT ["java", "-jar", "/work/quarkus-run.jar"]

@@ -1,0 +1,116 @@
+#!/usr/bin/env bash
+#
+# ./bramka — jedna komenda, która mówi, czy repo jest zdrowe.
+#
+# Wersja dla petclinica. Przykład, nie wzorzec do skopiowania — twoje repo
+# ma inne reguły i inne rzeczy warte pilnowania.
+#
+# Podział na HARD i SOFT jest tu najważniejszy:
+#
+#   HARD  nie wpuszczę — kod wyjścia niezerowy, CI staje
+#   SOFT  zwracam uwagę — przeczytaj, ale przepuszczam
+#
+# Bez tego podziału dzieje się jedna z dwóch rzeczy: albo wszystko jest twarde
+# i ludzie zaczynają obchodzić bramkę (`--no-verify` w aliasie), albo wszystko
+# jest miękkie i bramki po prostu nie ma.
+#
+# Dwa poziomy, bo pełny przebieg trwa ~90 sekund, a bramka, której nikt nie
+# uruchamia przed commitem, nie jest bramką:
+#
+#   ./bramka --szybko   ~10 s  — format i reguły. Do puszczania co chwilę.
+#   ./bramka            ~90 s  — wszystko, łącznie z testami. Przed commitem i w CI.
+#
+# Maven bierze konfigurację z MAVEN_ARGS. Za firmowym proxy:
+#   export MAVEN_ARGS="-s /ścieżka/do/settings.xml"
+#
+set -uo pipefail
+cd "$(dirname "${BASH_SOURCE[0]}")"
+
+CZERWONY=$'\033[31m'; ZIELONY=$'\033[32m'; ZOLTY=$'\033[33m'
+SZARY=$'\033[2m'; KONIEC=$'\033[0m'
+BLEDY=0; UWAGI=0
+SZYBKO=0
+[ "${1:-}" = "--szybko" ] && SZYBKO=1
+
+# Status idzie PRZED etykietą. Wyrównanie po etykiecie wymagałoby `printf
+# %-44s`, a printf liczy bajty — polskie znaki mają po dwa, więc kolumna
+# rozjeżdża się o tyle znaków, ile diakrytyków w opisie.
+hard() {
+  local opis="$1"; shift
+  if wynik=$("$@" 2>&1); then
+    printf "  ${ZIELONY}ok${KONIEC}     %s\n" "$opis"
+  else
+    BLEDY=$((BLEDY + 1)); printf "  ${CZERWONY}BLAD${KONIEC}   %s\n" "$opis"
+    echo "$wynik" | tail -12 | sed "s/^/         ${SZARY}/;s/$/${KONIEC}/"
+  fi
+}
+
+soft() {
+  local opis="$1"; shift
+  if wynik=$("$@" 2>&1); then
+    printf "  ${ZIELONY}ok${KONIEC}     %s\n" "$opis"
+  else
+    UWAGI=$((UWAGI + 1)); printf "  ${ZOLTY}uwaga${KONIEC}  %s\n" "$opis"
+    echo "$wynik" | tail -5 | sed "s/^/         ${SZARY}/;s/$/${KONIEC}/"
+  fi
+}
+
+echo
+echo "HARD — bez tego nie wpuszczam:"
+
+# Najtańsze najpierw. Format kosztuje 6 sekund; nie ma sensu czekać 84 sekundy
+# na testy, żeby dowiedzieć się, że i tak wywali się na formatowaniu.
+hard "formatowanie"       bash -c 'mvn -B -q spring-javaformat:validate'
+if [ "$SZYBKO" -eq 0 ]; then
+  hard "testy"            bash -c 'mvn -B test'
+fi
+
+# To jest właściwy powód, dla którego ta bramka istnieje. `mvn test` przechodzi
+# także wtedy, gdy ktoś osłabił asercję. Sprawdzone: zamiana isOk() na
+# is2xxSuccessful() zostawia 15/15 na zielono. Odcisk to łapie.
+hard "testy nietknięte, zależności bez zmian" \
+     uv run tools/repo_policy.py .
+
+echo
+echo "SOFT — zwracam uwagę:"
+
+# Wyłączony test nie jest czerwony. Jest niewidzialny — a to gorzej.
+#
+# Uwaga na szerokość wzorca. Pierwsza wersja brzmiała "@Disabled|@Ignore"
+# i zapalała się na piętnastu miejscach, bo petclinic używa
+# @DisabledInNativeImage i @DisabledInAotMode — legalnych, warunkowych
+# wyłączeń dla buildów natywnych. Reguła, która krzyczy przy każdym
+# uruchomieniu, przestaje być czytana. Dlatego dopasowujemy gołe @Disabled.
+soft "nikt nie wyłączył testu" bash -c '
+    ! grep -rqE "@(Disabled|Ignore)([^A-Za-z]|$)" src/test/java'
+
+# Liczba testów, która spada, to sygnał. Nie zawsze zły — czasem klasa się
+# scala. Ale zawsze warto o tym wiedzieć, więc SOFT, nie HARD.
+soft "liczba testów nie spadła" bash -c '
+    ile=$(grep -rc "@Test" src/test/java --include="*.java" | awk -F: "{s+=\$2} END {print s}")
+    zapisane=$(cat .liczba-testow 2>/dev/null || echo 0)
+    echo "$ile" > .liczba-testow
+    [ "$ile" -ge "$zapisane" ] || { echo "bylo $zapisane, jest $ile"; exit 1; }'
+
+# Pętla zwrotna, która zwalnia, przestaje być pętlą. Warto to widzieć wcześnie.
+if [ "$SZYBKO" -eq 0 ]; then
+  soft "pełny build poniżej 3 minut" bash -c '
+      start=$(date +%s)
+      mvn -B -q -DskipTests package >/dev/null 2>&1
+      czas=$(( $(date +%s) - start ))
+      [ "$czas" -lt 180 ] || { echo "build trwal ${czas}s"; exit 1; }'
+fi
+
+echo
+if [ "$BLEDY" -eq 0 ]; then
+  if [ "$SZYBKO" -eq 1 ]; then
+    printf "${ZIELONY}Szybka bramka otwarta.${KONIEC} Przed commitem puść pełną."
+  else
+    printf "${ZIELONY}Bramka otwarta.${KONIEC}"
+  fi
+else
+  printf "${CZERWONY}Bramka zamknięta.${KONIEC} %d rzeczy do naprawienia." "$BLEDY"
+fi
+[ "$UWAGI" -gt 0 ] && printf "  ${ZOLTY}(%d uwag)${KONIEC}" "$UWAGI"
+echo; echo
+exit $(( BLEDY > 0 ))

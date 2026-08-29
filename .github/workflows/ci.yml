@@ -1,0 +1,55 @@
+# Pipeline dla GitHuba — sprawdza, czy materiały warsztatowe są sprawne.
+#
+# Zwróć uwagę, czego tu NIE MA: listy kroków budowania, uruchamiania testów,
+# sprawdzania odnośników. Jest jedno wywołanie `./sprawdz material` — dokładnie
+# to samo, które uruchamiasz u siebie.
+#
+# Bramka nie ma dwóch wersji. Gdyby były dwie, rozjechałyby się w tydzień
+# i zacząłbyś słyszeć „u mnie działa".
+#
+# Bliźniaczy plik dla GitLaba: .gitlab-ci.yml — inny YAML, ta sama komenda.
+name: material
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  material:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      # .tooling/ to JDK 25, Maven i repozytorium lokalne. Pobiera je bootstrap;
+      # cache oszczędza kilka minut na przebiegu.
+      - name: Cache narzędzi warsztatu
+        uses: actions/cache@v4
+        with:
+          path: .tooling
+          key: tooling-${{ runner.os }}-${{ hashFiles('docs/setup/bootstrap.sh', 'archetype/**/pom.xml') }}
+
+      - name: Bootstrap środowiska
+        run: bash docs/setup/bootstrap.sh
+
+      # Docker jest na runnerze GitHuba domyślnie — Quarkus Dev Services
+      # postawi na nim Postgresa i Redpandę sam, bez konfiguracji tutaj.
+      - name: Bramka materiałów
+        run: |
+          source .tooling/env.sh
+          ./sprawdz material
+
+      - name: Raporty z testów
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: surefire-reports
+          path: '**/target/surefire-reports/**'
+          if-no-files-found: ignore

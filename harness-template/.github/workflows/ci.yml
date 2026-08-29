@@ -1,0 +1,52 @@
+# Pipeline dla GitHuba.
+#
+# Zwroc uwage, czego tu NIE MA: listy krokow budowania, uruchamiania testow,
+# sprawdzania regul. Jest jedno wywolanie `./bramka` - dokladnie to samo,
+# ktore uruchamiasz u siebie.
+#
+# Bramka nie ma dwoch wersji. Ta w CI i ta na twoim laptopie to ten sam plik.
+# Gdyby byly dwie, rozjechalyby sie w tydzien i zaczelbys slyszec "u mnie
+# dziala".
+#
+# Blizniaczy plik dla GitLaba: .gitlab-ci.yml - inny YAML, ta sama komenda.
+name: bramka
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  bramka:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: JDK 25
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+          cache: maven
+
+      # uv uruchamia i scoring-workera, i narzedzia w tools/.
+      - name: uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      # Docker jest na runnerze GitHuba domyslnie - Quarkus Dev Services
+      # postawi na nim Postgresa i Redpande sam, bez konfiguracji tutaj.
+      - name: Bramka
+        run: ./bramka
+
+      - name: Raporty z testow
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: surefire-reports
+          path: '**/target/surefire-reports/**'
+          if-no-files-found: ignore

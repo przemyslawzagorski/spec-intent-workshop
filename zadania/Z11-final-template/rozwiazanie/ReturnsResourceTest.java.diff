@@ -1,0 +1,83 @@
+--- ../../../harness-template/returns-service/src/test/java/workshop/rma/returns/boundary/ReturnsResourceTest.java	2026-08-27 21:31:47.000000000 +0200
++++ returns-service/src/test/java/workshop/rma/returns/boundary/ReturnsResourceTest.java	2026-08-28 15:24:16.263658000 +0200
+@@ -8,6 +8,8 @@
+ import static org.hamcrest.Matchers.nullValue;
+ 
+ import java.util.List;
++import java.time.Instant;
++import java.time.temporal.ChronoUnit;
+ import java.util.UUID;
+ 
+ import org.junit.jupiter.api.Test;
+@@ -20,6 +22,8 @@
+ import workshop.rma.returns.Fixtures;
+ import workshop.rma.returns.PolicyCase;
+ import workshop.rma.returns.control.Orders;
++import workshop.rma.returns.entity.Order;
++import workshop.rma.returns.entity.OrderLine;
+ 
+ /**
+  * Bramka HARD: kontrakt przez publiczna powierzchnie.
+@@ -130,6 +134,62 @@
+                 .then().statusCode(404);
+     }
+ 
++    // ---------------------------------------------------------- lista klienta
++
++    @Test
++    void customerReturnsAreListedNewestFirst() {                                  // R2.1
++        var c = approvedCase();
++        var customerId = UUID.randomUUID();
++
++        // Dwa zgloszenia tego samego klienta, godzine od siebie. Odleglosc od
++        // dostawy taka sama, zeby decyzja byla ta sama - rozni je tylko moment.
++        var starszy = zglos(customerId, c, Fixtures.requestedAt());
++        var nowszy = zglos(customerId, c, Fixtures.requestedAt().plus(1, ChronoUnit.HOURS));
++
++        given().when().get("/returns?customerId={id}", customerId)
++                .then().statusCode(200)
++                .body("size()", is(2))
++                .body("[0].returnId", equalTo(nowszy))
++                .body("[1].returnId", equalTo(starszy));
++    }
++
++    @Test
++    void customerWithoutReturnsGetsEmptyList() {                                  // R2.2
++        given().when().get("/returns?customerId={id}", UUID.randomUUID())
++                .then().statusCode(200)
++                .body("size()", is(0));
++    }
++
++    @Test
++    void listWithoutCustomerIdIsRejectedWith400() {                               // R2.3
++        given().when().get("/returns")
++                .then().statusCode(400);
++    }
++
++    /** Zaklada zamowienie danego klienta i zglasza zwrot. Zwraca returnId. */
++    private String zglos(UUID customerId, PolicyCase c, Instant requestedAt) {
++        var delivered = requestedAt.minus(c.daysSinceDelivery(), ChronoUnit.DAYS);
++        var order = new Order(UUID.randomUUID(), customerId, delivered,
++                List.of(new OrderLine(Fixtures.SKU_RETURNED, c.category(), c.amount(), 1)));
++        this.orders.save(order);
++
++        return given().contentType(ContentType.JSON)
++                .body("""
++                        {"orderId":"%s","requestedAt":"%s",
++                         "items":[{"sku":"%s","quantity":1,"reason":"%s"}]}"""
++                        .formatted(order.orderId(), requestedAt, Fixtures.SKU_RETURNED, c.reason()))
++                .when().post("/returns")
++                .then().statusCode(201)
++                .extract().path("returnId").toString();
++    }
++
++    private static PolicyCase approvedCase() {
++        return PolicyCase.withoutAbuse().stream()
++                .filter(x -> x.expectedDecision().name().equals("AUTO_APPROVED"))
++                .findFirst()
++                .orElseThrow();
++    }
++
+     private static String body(UUID orderId, PolicyCase c) {
+         return """
+                 {"orderId":"%s","requestedAt":"%s",

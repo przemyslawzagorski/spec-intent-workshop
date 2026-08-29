@@ -1,0 +1,33 @@
+# Skrypty MUSZA miec konce linii LF.
+#
+# Z CRLF bash na Linuksie wywala sie na `$'\r': command not found`, a potem na
+# bledzie skladni. Dziala to lokalnie pod Git Bash, wiec problem wychodzi dopiero
+# w CI - czyli najpozniej, jak sie da. Kazdy nowy skrypt bez rozszerzenia trzeba
+# tu dopisac; `./sprawdz env` przypomni, jesli o tym zapomnisz.
+*.sh            text eol=lf
+sprawdz         text eol=lf
+przygotuj       text eol=lf
+bramka          text eol=lf
+pre-commit      text eol=lf
+mvnw            text eol=lf
+installSkills   text eol=lf
+
+# Reszta tekstu normalizowana przy commicie, w katalogu roboczym wg platformy
+*.md            text
+*.py            text
+*.java          text
+*.yaml          text
+*.yml           text
+*.json          text
+*.xml           text
+*.toml          text
+*.properties    text
+*.tsv           text eol=lf
+*.lock          text eol=lf
+
+# Binaria
+*.jar           binary
+*.zip           binary
+*.png           binary
+*.gif           binary
+*.ico           binary

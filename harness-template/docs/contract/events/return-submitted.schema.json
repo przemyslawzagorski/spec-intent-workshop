@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://spec-intent-workshop/events/return-submitted.schema.json",
+  "title": "return.submitted",
+  "description": "Zdarzenie z returns-service do scoring-workera. Niesie wszystko, czego konsument potrzebuje - worker nie siega do bazy.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["returnId", "customerId", "requestedAt", "ordersInWindow", "history"],
+  "properties": {
+    "returnId":       { "type": "string", "format": "uuid" },
+    "customerId":     { "type": "string", "format": "uuid" },
+    "requestedAt":    { "type": "string", "format": "date-time" },
+    "ordersInWindow": { "type": "integer", "minimum": 0 },
+    "history": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["returnedAt", "decision"],
+        "properties": {
+          "returnedAt": { "type": "string", "format": "date-time" },
+          "decision":   { "type": "string", "enum": ["AUTO_APPROVED", "MANUAL_REVIEW", "REJECTED"] }
+        }
+      }
+    }
+  }
+}

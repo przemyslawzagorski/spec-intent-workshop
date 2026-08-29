@@ -1,0 +1,52 @@
+#!/usr/bin/env bash
+#
+# Blokuje commit, ktory zawiera coś wygladajace na sekret.
+#
+# Dlaczego hook, a nie regula w AGENTS.md: bo regula w AGENTS.md to PROSBA.
+# Agent zwykle jej posłucha. "Zwykle" to za malo, gdy stawka jest klucz do
+# produkcji. Hook nie prosi - odmawia.
+#
+# Wklej do .git/hooks/pre-commit i zrob chmod +x.
+set -uo pipefail
+
+# Sprawdzamy tylko to, co idzie do commita, i tylko dodawane linie.
+DIFF=$(git diff --cached --diff-filter=ACM -U0 | grep '^+' | grep -v '^+++')
+[ -n "$DIFF" ] || exit 0
+
+# Wzorce sa konkretne, nie "cos z slowem password". Wzorzec zbyt szeroki
+# zaczyna blokowac normalna prace i po tygodniu ktos doda --no-verify do aliasu.
+WZORCE=(
+  'AKIA[0-9A-Z]{16}'                      # AWS access key
+  'gh[pousr]_[A-Za-z0-9]{36}'             # GitHub token
+  'sk-ant-[A-Za-z0-9_-]{20,}'             # Anthropic
+  'sk-[A-Za-z0-9]{32,}'                   # OpenAI i podobne
+  'xox[baprs]-[A-Za-z0-9-]{10,}'          # Slack
+  '-----BEGIN [A-Z ]*PRIVATE KEY-----'    # klucz prywatny
+)
+
+ZNALEZIONE=0
+for w in "${WZORCE[@]}"; do
+  # -- przed wzorcem jest konieczne: wzorzec klucza prywatnego zaczyna sie
+  # od myslnika, wiec bez tego grep bierze go za flage i cicho nic nie sprawdza.
+  if trafienie=$(echo "$DIFF" | grep -nE -- "$w"); then
+    ZNALEZIONE=1
+    echo "  wzorzec: $w"
+    echo "$trafienie" | head -3 | sed 's/^/    /'
+  fi
+done
+
+if [ "$ZNALEZIONE" -eq 1 ]; then
+  cat >&2 <<'KONIEC'
+
+Commit zatrzymany: w zmianach jest cos, co wyglada na sekret.
+
+Co zrobic:
+  1. Usun wartosc z pliku. Wstaw odczyt ze zmiennej srodowiskowej.
+  2. Jesli klucz byl prawdziwy - uniewaznij go. Juz jest na dysku i w reflogu.
+  3. Jesli to falszywy alarm - git commit --no-verify, ale powiedz o tym
+     komus, bo to znaczy, ze wzorzec jest za szeroki i trzeba go poprawic.
+
+KONIEC
+  exit 1
+fi
+exit 0

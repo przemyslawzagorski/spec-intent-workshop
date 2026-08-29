@@ -1,0 +1,26 @@
+caseId	opis	category	daysSinceDelivery	amount	abuseScore	partial	reason	expectedDecision	expectedReasonCodes
+W01	default: dzien przed koncem okna	default	13	1999.0	0.0	False	CHANGED_MIND	AUTO_APPROVED	WITHIN_POLICY
+W02	default: OSTATNI dzien okna - wciaz w oknie	default	14	1999.0	0.0	False	CHANGED_MIND	AUTO_APPROVED	WITHIN_POLICY
+W03	default: pierwszy dzien PO oknie	default	15	1999.0	0.0	False	CHANGED_MIND	REJECTED	WINDOW_EXPIRED
+W04	elektronika: dzien przed koncem okna	elektronika	29	1999.0	0.0	False	CHANGED_MIND	AUTO_APPROVED	WITHIN_POLICY
+W05	elektronika: OSTATNI dzien okna - wciaz w oknie	elektronika	30	1999.0	0.0	False	CHANGED_MIND	AUTO_APPROVED	WITHIN_POLICY
+W06	elektronika: pierwszy dzien PO oknie	elektronika	31	1999.0	0.0	False	CHANGED_MIND	REJECTED	WINDOW_EXPIRED
+W07	akcesoria: dzien przed koncem okna	akcesoria	13	1999.0	0.0	False	CHANGED_MIND	AUTO_APPROVED	WITHIN_POLICY
+W08	akcesoria: OSTATNI dzien okna - wciaz w oknie	akcesoria	14	1999.0	0.0	False	CHANGED_MIND	AUTO_APPROVED	WITHIN_POLICY
+W09	akcesoria: pierwszy dzien PO oknie	akcesoria	15	1999.0	0.0	False	CHANGED_MIND	REJECTED	WINDOW_EXPIRED
+X01	kategoria wykluczona: oprogramowanie-cyfrowe	oprogramowanie-cyfrowe	0	1999.0	0.0	False	DAMAGED	REJECTED	CATEGORY_EXCLUDED
+A01	ponizej progu kwotowego	default	0	1999.0	0.0	False	CHANGED_MIND	AUTO_APPROVED	WITHIN_POLICY
+A02	DOKLADNIE prog - NIE idzie do przegladu	default	0	2000.0	0.0	False	CHANGED_MIND	AUTO_APPROVED	WITHIN_POLICY
+A03	tuz powyzej progu	default	0	2001.0	0.0	False	CHANGED_MIND	MANUAL_REVIEW	AMOUNT_ABOVE_THRESHOLD
+B01	tuz ponizej progu przegladu	default	0	1999.0	0.29	False	CHANGED_MIND	AUTO_APPROVED	WITHIN_POLICY
+B02	DOKLADNIE prog przegladu - juz dziala	default	0	1999.0	0.3	False	CHANGED_MIND	MANUAL_REVIEW	ABUSE_BORDERLINE
+B03	tuz ponizej progu odrzucenia	default	0	1999.0	0.59	False	CHANGED_MIND	MANUAL_REVIEW	ABUSE_BORDERLINE
+B04	DOKLADNIE prog odrzucenia - juz dziala	default	0	1999.0	0.6	False	CHANGED_MIND	REJECTED	ABUSE_SUSPECTED
+P01	zwrot czesciowy	default	0	1999.0	0.0	True	CHANGED_MIND	AUTO_APPROVED	WITHIN_POLICY
+C01	po oknie ORAZ powyzej progu kwotowego -> wygrywa REJECTED	default	24	2100.0	0.0	False	CHANGED_MIND	REJECTED	AMOUNT_ABOVE_THRESHOLD,WINDOW_EXPIRED
+C02	naduzycie ORAZ powyzej progu -> wygrywa REJECTED	default	0	2100.0	0.6	False	CHANGED_MIND	REJECTED	ABUSE_SUSPECTED,AMOUNT_ABOVE_THRESHOLD
+S01	platnosc za przesylke, powod CHANGED_MIND	default	0	1999.0	0.0	False	CHANGED_MIND	AUTO_APPROVED	WITHIN_POLICY
+S02	platnosc za przesylke, powod DAMAGED	default	0	1999.0	0.0	False	DAMAGED	AUTO_APPROVED	WITHIN_POLICY
+S03	platnosc za przesylke, powod NOT_AS_DESCRIBED	default	0	1999.0	0.0	False	NOT_AS_DESCRIBED	AUTO_APPROVED	WITHIN_POLICY
+S04	platnosc za przesylke, powod OTHER	default	0	1999.0	0.0	False	OTHER	AUTO_APPROVED	WITHIN_POLICY
+S05	platnosc za przesylke, powod WRONG_ITEM	default	0	1999.0	0.0	False	WRONG_ITEM	AUTO_APPROVED	WITHIN_POLICY

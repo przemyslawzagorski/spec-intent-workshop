@@ -1,0 +1,80 @@
+--- ../../../harness-template/returns-service/src/main/java/workshop/rma/returns/control/Returns.java	2026-08-28 08:55:54.000000000 +0200
++++ returns-service/src/main/java/workshop/rma/returns/control/Returns.java	2026-08-28 15:22:46.846456100 +0200
+@@ -48,6 +48,17 @@
+              where return_id = ?
+             """;
+ 
++    // Lista zwrotow klienta. Idzie przez orders, bo returns nie trzyma
++    // customer_id - klient jest wlascicielem zamowienia, nie zwrotu.
++    static final String FIND_BY_CUSTOMER = """
++            select r.return_id, r.order_id, r.submitted_at, r.decision,
++                   r.reason_codes, r.shipping_paid_by, r.refund_amount
++              from returns r
++              join orders o on o.order_id = r.order_id
++             where o.customer_id = ?
++             order by r.submitted_at desc
++            """;
++
+     static final String FIND = """
+             select order_id, submitted_at, decision, reason_codes,
+                    shipping_paid_by, refund_amount
+@@ -131,6 +142,22 @@
+         }
+     }
+ 
++    public List<ReturnDecision> findByCustomer(UUID customerId) {
++        try (var connection = this.dataSource.getConnection();
++                var p = connection.prepareStatement(FIND_BY_CUSTOMER)) {
++            p.setObject(1, customerId);
++            try (var result = p.executeQuery()) {
++                var out = new ArrayList<ReturnDecision>();
++                while (result.next()) {
++                    out.add(czytaj(result, result.getObject("return_id", UUID.class)));
++                }
++                return List.copyOf(out);
++            }
++        } catch (SQLException e) {
++            throw new IllegalStateException("nie da sie odczytac zwrotow klienta " + customerId, e);
++        }
++    }
++
+     public Optional<ReturnDecision> find(UUID returnId) {
+         try (var connection = this.dataSource.getConnection();
+                 var p = connection.prepareStatement(FIND)) {
+@@ -139,20 +166,25 @@
+                 if (!result.next()) {
+                     return Optional.empty();
+                 }
+-                var payer = result.getString("shipping_paid_by");
+-                return Optional.of(new ReturnDecision(
+-                        returnId,
+-                        result.getObject("order_id", UUID.class),
+-                        result.getTimestamp("submitted_at").toInstant(),
+-                        Decision.valueOf(result.getString("decision")),
+-                        Arrays.stream(result.getString("reason_codes").split(","))
+-                                .map(ReasonCode::valueOf)
+-                                .collect(Collectors.toUnmodifiableSet()),
+-                        payer == null ? null : Payer.valueOf(payer),
+-                        result.getBigDecimal("refund_amount")));
++                return Optional.of(czytaj(result, returnId));
+             }
+         } catch (SQLException e) {
+             throw new IllegalStateException("nie da sie odczytac zwrotu " + returnId, e);
+         }
+     }
++
++    /** Jedno miejsce, w ktorym wiersz staje sie decyzja. Uzywaja go find i findByCustomer. */
++    private static ReturnDecision czytaj(java.sql.ResultSet result, UUID returnId) throws SQLException {
++        var payer = result.getString("shipping_paid_by");
++        return new ReturnDecision(
++                returnId,
++                result.getObject("order_id", UUID.class),
++                result.getTimestamp("submitted_at").toInstant(),
++                Decision.valueOf(result.getString("decision")),
++                Arrays.stream(result.getString("reason_codes").split(","))
++                        .map(ReasonCode::valueOf)
++                        .collect(Collectors.toUnmodifiableSet()),
++                payer == null ? null : Payer.valueOf(payer),
++                result.getBigDecimal("refund_amount"));
++    }
+ }

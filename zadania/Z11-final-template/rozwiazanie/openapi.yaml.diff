@@ -1,0 +1,31 @@
+--- ../../../harness-template/docs/contract/openapi.yaml	2026-08-28 10:35:51.097655100 +0200
++++ docs/contract/openapi.yaml	2026-08-28 15:25:07.947218500 +0200
+@@ -37,6 +37,28 @@
+             application/json:
+               schema: { $ref: '#/components/schemas/Problem' }
+ 
++    get:
++      summary: Lista zwrotów klienta, od najnowszego
++      operationId: listCustomerReturns
++      parameters:
++        - name: customerId
++          in: query
++          required: true
++          schema: { type: string, format: uuid }
++      responses:
++        "200":
++          description: Lista decyzji. Klient bez zwrotów dostaje pustą listę, nie 404.
++          content:
++            application/json:
++              schema:
++                type: array
++                items: { $ref: '#/components/schemas/ReturnDecision' }
++        "400":
++          description: Brak parametru customerId
++          content:
++            application/json:
++              schema: { $ref: '#/components/schemas/Problem' }
++
+   /returns/{returnId}:
+     get:
+       summary: Odczyt zgłoszonego zwrotu

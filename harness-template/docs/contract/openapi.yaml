@@ -1,0 +1,144 @@
+openapi: 3.1.0
+info:
+  title: Returns API
+  version: "1.0.0"
+  description: |
+    WSPÓLNY KONTRAKT WARSZTATU. Nie modyfikujemy tego pliku.
+
+    Ten plik opisuje KSZTAŁT, nie REGUŁY. Progi, okna czasowe i wyjątki
+    są indywidualne - deklarujesz je w swoim `return-policy.yaml`.
+    Precedencja decyzji i kody powodów są wspólne, bo bez nich nie dałoby
+    się napisać jednej bramki dla wszystkich - patrz decision-procedure.md.
+
+paths:
+  /returns:
+    post:
+      summary: Zgłoszenie zwrotu
+      operationId: submitReturn
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ReturnRequest' }
+      responses:
+        "201":
+          description: Zwrot przyjęty i zakwalifikowany
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReturnDecision' }
+        "400":
+          description: Żądanie niepoprawne składniowo
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        "404":
+          description: Zamówienie nie istnieje
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Problem' }
+
+  /returns/{returnId}:
+    get:
+      summary: Odczyt zgłoszonego zwrotu
+      operationId: getReturn
+      parameters:
+        - name: returnId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Znaleziony zwrot
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReturnDecision' }
+        "404":
+          description: Zwrot nie istnieje
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Problem' }
+
+components:
+  schemas:
+
+    ReturnRequest:
+      type: object
+      required: [orderId, items, requestedAt]
+      additionalProperties: false
+      properties:
+        orderId:
+          type: string
+          format: uuid
+        requestedAt:
+          type: string
+          format: date-time
+          description: Moment zgłoszenia zwrotu przez klienta (UTC).
+        items:
+          type: array
+          minItems: 1
+          items: { $ref: '#/components/schemas/ReturnItem' }
+
+    ReturnItem:
+      type: object
+      required: [sku, quantity, reason]
+      additionalProperties: false
+      properties:
+        sku:      { type: string, minLength: 1 }
+        quantity: { type: integer, minimum: 1 }
+        reason:
+          type: string
+          enum: [DAMAGED, WRONG_ITEM, NOT_AS_DESCRIBED, CHANGED_MIND, OTHER]
+
+    ReturnDecision:
+      type: object
+      required: [returnId, orderId, decision, reasonCodes, submittedAt]
+      additionalProperties: false
+      properties:
+        returnId: { type: string, format: uuid }
+        orderId:  { type: string, format: uuid }
+        submittedAt:
+          type: string
+          format: date-time
+        decision:
+          $ref: '#/components/schemas/Decision'
+        reasonCodes:
+          type: array
+          description: |
+            Wszystkie kody, które zadziałały - nie tylko rozstrzygający.
+            Kolejność nieistotna, zbiór musi się zgadzać.
+          items: { $ref: '#/components/schemas/ReasonCode' }
+        shippingPaidBy:
+          $ref: '#/components/schemas/Payer'
+        refundAmount:
+          type: number
+          minimum: 0
+          description: Kwota do zwrotu. 0 dla REJECTED.
+
+    Decision:
+      type: string
+      enum: [AUTO_APPROVED, MANUAL_REVIEW, REJECTED]
+
+    Payer:
+      type: string
+      enum: [MERCHANT, CUSTOMER]
+
+    ReasonCode:
+      type: string
+      description: Kody wspólne dla wszystkich polityk. Znaczenie w decision-procedure.md.
+      enum:
+        - CATEGORY_EXCLUDED
+        - WINDOW_EXPIRED
+        - ABUSE_SUSPECTED
+        - ABUSE_BORDERLINE
+        - AMOUNT_ABOVE_THRESHOLD
+        - PARTIAL_NOT_ALLOWED
+        - WITHIN_POLICY
+
+    Problem:
+      type: object
+      required: [title, status]
+      additionalProperties: false
+      properties:
+        title:  { type: string }
+        status: { type: integer }
+        detail: { type: string }

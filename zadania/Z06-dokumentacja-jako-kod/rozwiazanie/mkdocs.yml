@@ -1,0 +1,21 @@
+site_name: Petclinic — dokumentacja techniczna
+site_description: Dla kogoś, kto ma ten kod zmieniać.
+
+theme:
+  name: material
+  language: pl
+  features:
+    - navigation.sections
+    - content.code.copy
+
+nav:
+  - Start: index.md
+  - Domena: domena.md
+  - Uruchomienie: uruchomienie.md
+  - Decyzje: decyzje.md
+
+markdown_extensions:
+  - admonition
+  - tables
+  - toc:
+      permalink: true

@@ -1,0 +1,339 @@
+#!/usr/bin/env bash
+#
+# ./sprawdz — sprawdza, czy skonczyles zadanie.
+#
+#   ./sprawdz              ta pomoc
+#   ./sprawdz env          czy srodowisko dziala
+#   ./sprawdz Z01          czy zadanie Z01 jest zrobione
+#
+# Nie wszystkie zadania maja bramke. Przy planowaniu, onboardingu czy
+# rozmowie o kontekscie nie ma czego sprawdzac maszynowo - tam liczy sie
+# to, co zobaczysz i o czym pogadamy.
+#
+# Pracujesz w praca/<ZADANIE>/. Kazde zadanie ma wlasna piaskownice, wiec
+# mozesz zaczac od dowolnego i nic ci nie brakuje.
+#
+set -uo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$ROOT"
+
+CZERWONY=$'\033[31m'; ZIELONY=$'\033[32m'; ZOLTY=$'\033[33m'
+SZARY=$'\033[2m'; KONIEC=$'\033[0m'
+
+BLEDY=0
+UWAGI=0
+
+# musi — bez tego zadanie nie jest zrobione
+musi() {
+  local opis="$1"; shift
+  if wynik=$("$@" 2>&1); then
+    printf "  ${ZIELONY}jest${KONIEC}    %s\n" "$opis"
+  else
+    BLEDY=$((BLEDY + 1))
+    printf "  ${CZERWONY}BRAK${KONIEC}    %s\n" "$opis"
+    [ -n "$wynik" ] && printf "${SZARY}%s${KONIEC}\n" \
+      "$(echo "$wynik" | sed 's/^/          /' | head -8)"
+  fi
+}
+
+# warto — zwracam uwage, ale przepuszczam
+warto() {
+  local opis="$1"; shift
+  if wynik=$("$@" 2>&1); then
+    printf "  ${ZIELONY}jest${KONIEC}    %s\n" "$opis"
+  else
+    UWAGI=$((UWAGI + 1))
+    printf "  ${ZOLTY}uwaga${KONIEC}   %s\n" "$opis"
+    [ -n "$wynik" ] && printf "${SZARY}%s${KONIEC}\n" \
+      "$(echo "$wynik" | sed 's/^/          /' | head -4)"
+  fi
+}
+
+podsumuj() {
+  echo
+  if [ "$BLEDY" -eq 0 ]; then
+    printf "${ZIELONY}Gotowe.${KONIEC}"
+  else
+    printf "${CZERWONY}Jeszcze nie.${KONIEC} Brakuje %d rzeczy." "$BLEDY"
+  fi
+  [ "$UWAGI" -gt 0 ] && printf "  ${ZOLTY}(%d uwag do przeczytania)${KONIEC}" "$UWAGI"
+  echo; echo
+  [ "$BLEDY" -eq 0 ]
+}
+
+srodowisko() {
+  # shellcheck source=/dev/null
+  [ -f .tooling/env.sh ] && source .tooling/env.sh
+}
+
+# ---------------------------------------------------------------- env
+
+sprawdz_env() {
+  echo "Srodowisko:"
+  srodowisko
+  musi  "Java 25"            bash -c 'java -version 2>&1 | grep -qE "\"25[.\"]"'
+  musi  "Maven"              bash -c 'mvn -v >/dev/null 2>&1'
+  musi  "uv"                 bash -c 'uv --version >/dev/null 2>&1'
+  musi  "Docker dziala"      bash -c 'docker info >/dev/null 2>&1'
+  musi  "git"                bash -c 'git --version >/dev/null 2>&1'
+  warto "archetyp zainstalowany" bash -c '
+      ls .tooling/m2/workshop/returns-service-archetype/*/*.jar >/dev/null 2>&1'
+  # Skrypt bez rozszerzenia, ktorego nie ma w .gitattributes, dostanie CRLF przy
+  # checkoucie pod Windowsem i nie odpali sie na Linuksie. Latwo o tym zapomniec.
+  warto "skrypty maja wymuszone LF" bash -c '
+      brak=""
+      for f in $(git ls-files); do
+        case "$f" in *.*) continue ;; esac
+        head -c 2 "$f" 2>/dev/null | grep -q "#!" || continue
+        git check-attr eol "$f" | grep -q "eol: lf" || brak="$brak $f"
+      done
+      [ -z "$brak" ] || { echo "bez eol=lf w .gitattributes:$brak"; exit 1; }'
+  # Windows nie sledzi bitu wykonywalnego, wiec skrypt zacommitowany stad
+  # trafia do repo jako 100644 i na Linuksie wita kolege "Permission denied".
+  warto "skrypty sa wykonywalne w gicie" bash -c '
+      brak=""
+      for f in $(git ls-files); do
+        head -c 2 "$f" 2>/dev/null | grep -q "#!" || continue
+        [ "$(git ls-files -s "$f" | cut -d" " -f1)" = "100755" ] || brak="$brak $f"
+      done
+      [ -z "$brak" ] || { echo "bez bitu +x w gicie:$brak"; exit 1; }'
+  warto "Maven nie idzie przez firmowy mirror" bash -c '
+      ! mvn -s docs/setup/settings-central.xml help:effective-settings 2>/dev/null |
+        grep -qi "mirrorOf.*central"'
+  podsumuj
+}
+
+# ------------------------------------------------------------- material
+
+# Czy materialy warsztatowe sa sprawne. To wola CI - ten sam kod, ktory
+# mozesz uruchomic u siebie. Bramka nie ma dwoch wersji.
+sprawdz_material() {
+  echo "Materialy warsztatowe:"
+  srodowisko
+
+  musi "odnosniki w markdownie prowadza gdzies" uv run tools/sprawdz_odnosniki.py
+
+  musi "kazde zadanie ma README" bash -c '
+      brak=""
+      for d in zadania/*/ bonusy/*/; do
+        [ -f "$d/README.md" ] || brak="$brak $d"
+      done
+      [ -z "$brak" ] || { echo "bez README:$brak"; exit 1; }'
+
+  musi "archetyp generuje dzialajacy projekt" bash -c "
+      tmp=\$(mktemp -d)
+      cd \"\$tmp\" && mvn -B -q -s '$ROOT/docs/setup/settings-central.xml'         -Dmaven.repo.local='$ROOT/.tooling/m2' archetype:generate         -DarchetypeGroupId=workshop -DarchetypeArtifactId=returns-service-archetype         -DarchetypeVersion=2026 -DgroupId=ci -DartifactId=svc -Dversion=1.0.0 -Dpackage=ci.rma &&
+      cd svc && mvn -B -q -s '$ROOT/docs/setup/settings-central.xml'         -Dmaven.repo.local='$ROOT/.tooling/m2' test"
+
+  musi "kata odtwarza zlote wzorce" bash -c "
+      tmp=\$(mktemp -d)
+      cp -r katy/legacy-eligibility/. \"\$tmp/\" &&
+      cd \"\$tmp\" && javac -d . legacy/*.java OdtworzWzorce.java 2>/dev/null &&
+      java OdtworzWzorce wzorce/return-eligibility.tsv >/dev/null"
+
+  musi "harness-template: bramka otwarta" bash -c "
+      cd harness-template
+      export MAVEN_ARGS='-s $ROOT/docs/setup/settings-central.xml -Dmaven.repo.local=$ROOT/.tooling/m2'
+      ./bramka >/dev/null"
+
+  podsumuj
+}
+
+# ---------------------------------------------------------------- zadania
+
+Z01() {
+  echo "Z01 - init workspace:"
+  local p="praca/Z01/spring-petclinic"
+  musi  "jest AGENTS.md"                test -f "$p/AGENTS.md"
+  musi  "AGENTS.md miesci sie w 2 KB"   bash -c "
+      [ -f '$p/AGENTS.md' ] && [ \$(wc -c < '$p/AGENTS.md') -le 2048 ]"
+  musi  "hook jest wykonywalny"         test -x "$p/.git/hooks/pre-commit"
+  # Hook, ktory nie blokuje, nie jest hookiem. Podsuwamy mu DWA rodzaje sekretu:
+  # klucz AWS i klucz prywatny. Ten drugi jest wazny, bo jego wzorzec zaczyna sie
+  # od myslnika - grep bez `--` bierze go za flage i cicho nic nie sprawdza.
+  # Ta pulapka byla w naszym wlasnym rozwiazaniu i przeszla przegląd.
+  musi  "hook blokuje klucz API"        bash -c "
+      cd '$p' || exit 1
+      echo 'AWS_SECRET=AKIAIOSFODNN7EXAMPLE' > .probka-klucza
+      git add .probka-klucza 2>/dev/null
+      if git -c user.name=t -c user.email=t@t commit -m proba >/dev/null 2>&1; then
+        git reset --quiet --soft HEAD~1
+        git reset --quiet HEAD .probka-klucza 2>/dev/null; rm -f .probka-klucza
+        echo 'commit z kluczem AWS przeszedl - hook nie zadzialal'; exit 1
+      fi
+      git reset --quiet HEAD .probka-klucza 2>/dev/null; rm -f .probka-klucza"
+  musi  "hook blokuje klucz prywatny"   bash -c "
+      cd '$p' || exit 1
+      echo '-----BEGIN RSA PRIVATE KEY-----' > .probka-klucza2
+      git add .probka-klucza2 2>/dev/null
+      if git -c user.name=t -c user.email=t@t commit -m proba2 >/dev/null 2>&1; then
+        git reset --quiet --soft HEAD~1
+        git reset --quiet HEAD .probka-klucza2 2>/dev/null; rm -f .probka-klucza2
+        echo 'commit z kluczem prywatnym przeszedl - sprawdz, czy grep ma --'; exit 1
+      fi
+      git reset --quiet HEAD .probka-klucza2 2>/dev/null; rm -f .probka-klucza2"
+  warto "AGENTS.md wskazuje wzorzec, zamiast go opisywac" bash -c "
+      grep -qiE 'wzoruj|patrz |zobacz |przyklad|src/main' '$p/AGENTS.md'"
+  warto "sa zainstalowane skille"       bash -c '
+      ls -d ~/.claude/skills/*/ .claude/skills/*/ 2>/dev/null | head -1 | grep -q .'
+  podsumuj
+}
+
+Z02() {
+  echo "Z02 - agenty kochaja przyklady:"
+  srodowisko
+  local p="praca/Z02/returns-service"
+  musi  "projekt wygenerowany z archetypu" test -f "$p/pom.xml"
+  musi  "projekt sie kompiluje" bash -c "
+      cd '$p' && mvn -B -q -s '$ROOT/docs/setup/settings-central.xml'         -Dmaven.repo.local='$ROOT/.tooling/m2' test-compile"
+  # bench.tsv lezy w korzeniu celowo - to wspolna tabela, ktora ogladamy
+  # razem po zadaniu. Rozrzut w grupie mowi wiecej niz pojedynczy wynik.
+  warto "sa wyniki pomiaru A/B"  bash -c '
+      test -f bench.tsv && [ "$(tail -n +2 bench.tsv | wc -l)" -ge 2 ]'
+  # Archetyp daje szkielet i pomocniki testowe, ale ani jednej klasy testowej.
+  # Dlatego `mvn test` mowi BUILD SUCCESS - i nic to nie znaczy. Chcemy, zeby
+  # kazdy to zobaczyl na wlasne oczy, zanim dojdziemy do bramek w Z07.
+  warto "sa jakiekolwiek testy" bash -c "
+      ls '$p'/src/test/java/*/*/*/*Test.java >/dev/null 2>&1 ||
+      { echo 'zero klas testowych - a mvn test i tak mowi BUILD SUCCESS'; exit 1; }"
+  podsumuj
+}
+
+Z06() {
+  echo "Z06 - dokumentacja jako kod:"
+  local p="praca/Z06"
+  musi  "jest mkdocs.yml"        test -f "$p/mkdocs.yml"
+  musi  "sa strony w docs/"      bash -c "ls '$p'/docs/*.md >/dev/null 2>&1"
+  # --strict zamienia ostrzezenia w bledy. Bez tego link do nieistniejacej
+  # strony przechodzi po cichu, a o to wlasnie chodzi w tym zadaniu.
+  #
+  # Wersje przypiete celowo. Reszta repo jest przypieta (petclinic na commicie,
+  # JDK, Maven), a mkdocs byl jedynym narzedziem pod bramka, ktore nie bylo -
+  # czyli bomba zegarowa na dzien, w ktorym wyjdzie mkdocs 2.0.
+  musi  "mkdocs build --strict przechodzi" bash -c "
+      cd '$p' && uvx --with 'mkdocs==1.6.*' --with 'mkdocs-material==9.*' mkdocs build --strict --site-dir .site >/dev/null"
+  warto "jest notatka, co agent zmyslil" test -f "$p/ZMYSLONE.md"
+  podsumuj
+}
+
+Z07() {
+  echo "Z07 - harness:"
+  local p="${1:-praca/Z07/spring-petclinic}"
+  musi  "jest projekt do sprawdzenia"  test -d "$p"
+  # Bez odcisku reguly [2] i [3] sa wylaczone, wiec bramka przepuszczalaby
+  # wszystko i byla teatrem. Odcisk jest warunkiem, nie dodatkiem.
+  musi  "jest odcisk bramki"           test -f "$p/.odcisk-bramki"
+  musi  "reguly dotrzymane"            uv run tools/repo_policy.py "$p"
+  # Petclinic ma wlasne workflowy od upstreamu, wiec sama ich obecnosc niczego
+  # nie dowodzi. Szukamy skryptu, ktory ty napisales.
+  musi  "jest wlasna bramka (skrypt ./bramka)"  test -x "$p/bramka"
+  musi  "bramka przechodzi"                     bash -c "cd '$p' && ./bramka"
+  warto "bramka rozroznia HARD od SOFT"  bash -c "
+      grep -qiE 'hard|soft|twarde|miekk' '$p/bramka'"
+  warto "CI wola te sama bramke"  bash -c "
+      grep -rqE '\./bramka' '$p'/.github/workflows/ '$p'/.gitlab-ci.yml 2>/dev/null"
+  podsumuj
+}
+
+Z09() {
+  echo "Z09 - legacy za siatka:"
+  srodowisko
+  local p="praca/Z09"
+  echo "  kata:"
+  musi  "sa zlote wzorce"  bash -c "
+      f=\$(ls '$p'/wzorce/*.tsv 2>/dev/null | head -1)
+      test -n \"\$f\" && [ \$(tail -n +2 \"\$f\" | wc -l) -ge 8 ]"
+  musi  "wzorce sie odtwarzaja"  bash -c "
+      cd '$p' && javac -d . legacy/*.java OdtworzWzorce.java 2>/dev/null &&
+      java OdtworzWzorce wzorce/return-eligibility.tsv >/dev/null"
+  warto "jest notatka z decyzja"  test -f "$p/DECYZJA.md"
+
+  echo "  petclinic:"
+  local q="$p/spring-petclinic"
+  local o="$q/src/main/java/org/springframework/samples/petclinic/owner"
+  # Portu szukamy po ksztalcie, nie po nazwie: interfejs w pakiecie owner,
+  # ktory nie jest repozytorium Spring Data.
+  musi  "jest port (interfejs bez Spring Data)"  bash -c "
+      grep -rlE '^public interface|^interface' '$o' 2>/dev/null |
+      xargs -r grep -LE 'springframework.data' | grep -q ."
+  musi  "regula nie wie o HTTP"  bash -c "
+      k=\$(grep -rlE 'class .*(UpdateOwner|Update|UseCase|Service)' '$o' 2>/dev/null |
+           grep -v Controller | grep -v Adapter)
+      test -n \"\$k\" || { echo 'nie znalazlem klasy z regula'; exit 1; }
+      echo \"\$k\" | xargs grep -l 'springframework.web' && exit 1
+      exit 0"
+  # Test ma dotyczyc PORTU, a nie byc dowolnym testem bez Springa - w tym
+  # pakiecie i tak jest ich kilka (OwnerTests, PetValidatorTests...).
+  # Nazwe portu liczymy tutaj, a nie w bash -c: zagniezdzone cudzyslowy
+  # zjadaly podstawienie i check przechodzil falszywie.
+  local port nazwa
+  port=$(grep -rlE '^public interface|^interface' "$o" 2>/dev/null |
+         xargs -r grep -LE 'springframework.data' | head -1)
+  nazwa=$(basename "${port:-brak}" .java)
+  local t="$q/src/test/java/org/springframework/samples/petclinic/owner"
+  musi  "jest test portu bez kontekstu Springa"  bash -c "
+      test '$nazwa' != brak || { echo 'nie ma portu, wiec nie ma czego testowac'; exit 1; }
+      grep -rl '$nazwa' '$t' 2>/dev/null |
+        xargs -r grep -lE '@Test' |
+        xargs -r grep -LE '^@(SpringBootTest|WebMvcTest|DataJpaTest)' | grep -q ."
+  warto "pelne testy przechodza"  bash -c "
+      cd '$q' && mvn -B -q -s '$ROOT/docs/setup/settings-central.xml' -Dmaven.repo.local='$ROOT/.tooling/m2' test 2>&1 | grep -E 'ERROR|BUILD FAILURE' | head -3
+      exit \${PIPESTATUS[0]}"
+  podsumuj
+}
+
+Z10() {
+  echo "Z10 - docker:"
+  local p="praca/Z10"
+  musi  "jest Dockerfile"        bash -c "
+      find '$p' -maxdepth 4 -iname 'Dockerfile*' -not -path '*/target/*' | grep -q ."
+  musi  "obraz istnieje"         bash -c 'docker image inspect warsztat-z10 >/dev/null 2>&1'
+  warto "obraz wazy mniej niz 500 MB" bash -c '
+      s=$(docker image inspect warsztat-z10 --format "{{.Size}}" 2>/dev/null)
+      [ -n "$s" ] && [ "$s" -lt 524288000 ]'
+  warto "jest healthcheck" bash -c "
+      pliki=\$(find '$p' -maxdepth 4 \( -iname 'Dockerfile*' -o -iname '*compose*.y*ml' \) \
+                -not -path '*/target/*' 2>/dev/null)
+      [ -n \"\$pliki\" ] || { echo 'nie ma czego sprawdzic'; exit 1; }
+      grep -qi healthcheck \$pliki"
+  podsumuj
+}
+
+Z11() {
+  echo "Z11 - gotowy template:"
+  srodowisko
+  local p="praca/Z11/harness-template"
+  [ -d "$p" ] || p="harness-template"
+  musi  "template na miejscu"  test -f "$p/returns-service/pom.xml"
+  musi  "testy Javy zielone"   bash -c "
+      cd '$p/returns-service' && mvn -B -s '$ROOT/docs/setup/settings-central.xml' \
+        -Dmaven.repo.local='$ROOT/.tooling/m2' test"
+  musi  "testy Pythona zielone" bash -c "
+      cd '$p/scoring-worker' && POLICY_FILE=../return-policy.yaml uv run --group dev pytest -q"
+  podsumuj
+}
+
+# ---------------------------------------------------------------- main
+
+pomoc() {
+  # tylko blok komentarza z naglowka, do pierwszej linii bez '#'
+  awk 'NR>1 && /^#/ { sub(/^# ?/, ""); print; next } NR>1 { exit }' "$0"
+  echo "Zadania z bramka: Z01 Z02 Z06 Z07 Z09 Z10 Z11"
+  echo "Do tego: ./sprawdz material - czy same materialy sa sprawne (wola to CI)."
+  echo "Pozostale (Z03 Z04 Z05 Z08 Z12) omawiamy - nie ma tam czego sprawdzac skryptem."
+}
+
+case "${1:-}" in
+  env)      sprawdz_env ;;
+  material) sprawdz_material ;;
+  Z01|Z02|Z06|Z07|Z09|Z10|Z11) "$1" "${2:-}" ;;
+  Z03|Z04|Z05|Z08|Z12)
+    echo "Zadanie $1 nie ma bramki - to zadanie do omowienia, nie do sprawdzenia."
+    echo "Zobacz sekcje 'Omowienie' w zadania/$1*/README.md"
+    exit 0 ;;
+  ""|-h|--help) pomoc ;;
+  *)
+    echo "Nie znam zadania '$1'."; echo
+    pomoc; exit 2 ;;
+esac

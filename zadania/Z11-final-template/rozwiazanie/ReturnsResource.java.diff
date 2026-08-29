@@ -1,0 +1,33 @@
+--- ../../../harness-template/returns-service/src/main/java/workshop/rma/returns/boundary/ReturnsResource.java	2026-08-27 23:26:40.000000000 +0200
++++ returns-service/src/main/java/workshop/rma/returns/boundary/ReturnsResource.java	2026-08-28 15:23:01.784004900 +0200
+@@ -9,6 +9,7 @@
+ import jakarta.ws.rs.POST;
+ import jakarta.ws.rs.Path;
+ import jakarta.ws.rs.PathParam;
++import jakarta.ws.rs.QueryParam;
+ import jakarta.ws.rs.Produces;
+ import jakarta.ws.rs.core.MediaType;
+ import jakarta.ws.rs.core.Response;
+@@ -72,6 +73,22 @@
+         return Response.status(Response.Status.CREATED).entity(decision).build();
+     }
+ 
++    /**
++     * Lista zwrotow klienta, od najnowszego.
++     *
++     * <p>Pusty wynik to 200 z pusta lista, nie 404. Klient bez zwrotow istnieje -
++     * po prostu nic nie oddawal. 404 znaczyloby "nie ma takiego klienta", a tego
++     * ten serwis nie wie.
++     */
++    @GET
++    public Response list(@QueryParam("customerId") UUID customerId) {
++        if (customerId == null) {
++            return problem(Response.Status.BAD_REQUEST, "Brak customerId",
++                    "parametr customerId jest wymagany");
++        }
++        return Response.ok(this.returns.findByCustomer(customerId)).build();
++    }
++
+     @GET
+     @Path("{returnId}")
+     public Response read(@PathParam("returnId") UUID returnId) {

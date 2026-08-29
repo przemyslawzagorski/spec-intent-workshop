@@ -1,0 +1,74 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://spec-intent-workshop/return-policy.schema.json",
+  "title": "Return policy",
+  "description": "Twoja polityka zwrotów. Kontrakt mowi CO sie dzieje; ten plik mowi PRZY JAKICH WARTOSCIACH.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "windows", "excludedCategories", "partialReturnAllowed", "manualReviewAboveAmount", "abuse", "shipping"],
+  "properties": {
+    "version": { "const": 1 },
+
+    "windows": {
+      "description": "Okno zwrotu w dniach, per kategoria. Klucz 'default' jest obowiazkowy.",
+      "type": "object",
+      "required": ["default"],
+      "minProperties": 1,
+      "additionalProperties": { "type": "integer", "minimum": 0, "maximum": 365 }
+    },
+
+    "excludedCategories": {
+      "description": "Kategorie, ktorych w ogole nie przyjmujemy. Moze byc pusta.",
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "uniqueItems": true
+    },
+
+    "partialReturnAllowed": {
+      "description": "Czy wolno zwrocic czesc pozycji z zamowienia.",
+      "type": "boolean"
+    },
+
+    "manualReviewAboveAmount": {
+      "description": "Kwota, POWYZEJ ktorej zwrot idzie do recznej akceptacji. Prog ostry.",
+      "type": "number",
+      "minimum": 0
+    },
+
+    "abuse": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["windowDays", "reviewAt", "rejectAt"],
+      "properties": {
+        "windowDays": { "type": "integer", "minimum": 1, "maximum": 365 },
+        "reviewAt":   { "type": "number", "minimum": 0, "maximum": 1 },
+        "rejectAt":   { "type": "number", "minimum": 0, "maximum": 1 }
+      }
+    },
+
+    "shipping": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["paidBy"],
+      "properties": {
+        "paidBy": {
+          "description": "Kto placi za przesylke zwrotna, per powod zwrotu.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["DAMAGED", "WRONG_ITEM", "NOT_AS_DESCRIBED", "CHANGED_MIND", "OTHER"],
+          "properties": {
+            "DAMAGED":          { "$ref": "#/$defs/payer" },
+            "WRONG_ITEM":       { "$ref": "#/$defs/payer" },
+            "NOT_AS_DESCRIBED": { "$ref": "#/$defs/payer" },
+            "CHANGED_MIND":     { "$ref": "#/$defs/payer" },
+            "OTHER":            { "$ref": "#/$defs/payer" }
+          }
+        }
+      }
+    }
+  },
+
+  "$defs": {
+    "payer": { "type": "string", "enum": ["MERCHANT", "CUSTOMER"] }
+  }
+}

@@ -1,0 +1,39 @@
+diff --git a/src/test/java/org/springframework/samples/petclinic/owner/OwnerControllerTests.java b/src/test/java/org/springframework/samples/petclinic/owner/OwnerControllerTests.java
+index dd379a5..713daa0 100644
+--- a/src/test/java/org/springframework/samples/petclinic/owner/OwnerControllerTests.java
++++ b/src/test/java/org/springframework/samples/petclinic/owner/OwnerControllerTests.java
+@@ -21,6 +21,7 @@ import org.junit.jupiter.api.Test;
+ import org.junit.jupiter.api.condition.DisabledInNativeImage;
+ import org.springframework.beans.factory.annotation.Autowired;
+ import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
++import org.springframework.context.annotation.Import;
+ import org.springframework.data.domain.Page;
+ import org.springframework.data.domain.PageImpl;
+ import org.springframework.data.domain.Pageable;
+@@ -57,7 +58,16 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
+  * @author Colin But
+  * @author Wick Dynex
+  */
++// Refaktor dolozyl kontrolerowi wspolpracownika, wiec plaster @WebMvcTest
++// przestal sie skladac. Wciagamy UpdateOwner do plastra i podstawiamy atrape
++// portu Owners.
++//
++// To JEST zmiana testu i to jest w porzadku - bo zmienil sie kontrakt klasy,
++// a nie dlatego, ze test byl niewygodny. Regula "nie zmieniaj testu, zeby
++// przeszedl" nie znaczy "nigdy nie dotykaj testow". Znaczy: rob to swiadomie
++// i umiej powiedziec dlaczego.
+ @WebMvcTest(OwnerController.class)
++@Import(UpdateOwner.class)
+ @DisabledInNativeImage
+ @DisabledInAotMode
+ class OwnerControllerTests {
+@@ -70,6 +80,9 @@ class OwnerControllerTests {
+ 	@MockitoBean
+ 	private OwnerRepository owners;
+ 
++	@MockitoBean
++	private Owners ownersPort;
++
+ 	private Owner george() {
+ 		Owner george = new Owner();
+ 		george.setId(TEST_OWNER_ID);

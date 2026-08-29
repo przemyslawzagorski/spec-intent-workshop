@@ -1,0 +1,40 @@
+diff --git a/src/main/java/org/springframework/samples/petclinic/owner/OwnerController.java b/src/main/java/org/springframework/samples/petclinic/owner/OwnerController.java
+index b4b6145..4f6592f 100644
+--- a/src/main/java/org/springframework/samples/petclinic/owner/OwnerController.java
++++ b/src/main/java/org/springframework/samples/petclinic/owner/OwnerController.java
+@@ -52,8 +52,11 @@ class OwnerController {
+ 
+ 	private final OwnerRepository owners;
+ 
+-	public OwnerController(OwnerRepository owners) {
++	private final UpdateOwner updateOwner;
++
++	public OwnerController(OwnerRepository owners, UpdateOwner updateOwner) {
+ 		this.owners = owners;
++		this.updateOwner = updateOwner;
+ 	}
+ 
+ 	@InitBinder
+@@ -149,14 +152,19 @@ class OwnerController {
+ 			return VIEWS_OWNER_CREATE_OR_UPDATE_FORM;
+ 		}
+ 
+-		if (!Objects.equals(owner.getId(), ownerId)) {
++		// Regula zyje w UpdateOwner. Tutaj zostaje wylacznie tlumaczenie
++		// wyniku na HTTP - i to jest cala robota kontrolera.
++		//
++		// Bez wzorcow w switch, bo ten projekt celuje w Jave 17. Na 21 to samo
++		// zapisalbys jako switch po typie wyniku.
++		UpdateOwner.Result wynik = this.updateOwner.handle(owner, ownerId);
++
++		if (wynik instanceof UpdateOwner.Result.IdMismatch) {
+ 			result.rejectValue("id", "mismatch", "The owner ID in the form does not match the URL.");
+ 			redirectAttributes.addFlashAttribute("error", "Owner ID mismatch. Please try again.");
+ 			return "redirect:/owners/{ownerId}/edit";
+ 		}
+ 
+-		owner.setId(ownerId);
+-		this.owners.save(owner);
+ 		redirectAttributes.addFlashAttribute("message", "Owner Values Updated");
+ 		return "redirect:/owners/{ownerId}";
+ 	}

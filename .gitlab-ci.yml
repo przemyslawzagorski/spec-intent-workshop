@@ -1,0 +1,51 @@
+# Pipeline dla GitLaba — sprawdza, czy materiały warsztatowe są sprawne.
+#
+# Porównaj ten plik z .github/workflows/ci.yml. Są napisane w dwóch różnych
+# składniach, przez dwa różne narzędzia, i robią DOKŁADNIE TO SAMO:
+#
+#     ./sprawdz material
+#
+# To nie jest duplikacja. Jedno źródło reguł, reszta to adaptery — tak samo
+# jak w kodzie. Tu jednym źródłem jest `sprawdz`, a oba pliki CI są adapterami
+# do platformy.
+
+stages: [material]
+
+material:
+  stage: material
+  image: ubuntu:24.04
+  timeout: 40 minutes
+
+  # Docker-in-Docker: Quarkus Dev Services potrzebuje demona, żeby postawić
+  # Postgresa i Redpandę do testów harness-template.
+  services:
+    - name: docker:27-dind
+      alias: docker
+  variables:
+    DOCKER_HOST: tcp://docker:2375
+    DOCKER_TLS_CERTDIR: ""
+    TESTCONTAINERS_HOST_OVERRIDE: docker
+
+  cache:
+    key:
+      files:
+        - docs/setup/bootstrap.sh
+    paths:
+      - .tooling/
+
+  before_script:
+    - apt-get update -qq && apt-get install -y -qq curl unzip git ca-certificates
+    - curl -LsSf https://astral.sh/uv/install.sh | sh
+    - export PATH="$HOME/.local/bin:$PATH"
+    - bash docs/setup/bootstrap.sh
+
+  script:
+    - export PATH="$HOME/.local/bin:$PATH"
+    - source .tooling/env.sh
+    - ./sprawdz material
+
+  artifacts:
+    when: always
+    paths:
+      - "**/target/surefire-reports/"
+    expire_in: 1 week

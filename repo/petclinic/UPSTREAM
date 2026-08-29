@@ -1,0 +1,6 @@
+# Skad bierzemy petclinica i na czym go przypinamy.
+# Przypiecie jest wazne: bez niego kazdy uczestnik dostaje inny stan repo,
+# a polowa zadan przestaje byc porownywalna.
+URL=https://github.com/spring-projects/spring-petclinic.git
+COMMIT=818c4136ea971c21674525f9053de0d9c7ad8cfe
+OPIS=docs: Fix formatting in Docker container instructions (2026-08-19)

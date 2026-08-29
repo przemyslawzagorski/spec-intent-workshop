@@ -1,0 +1,13 @@
+caseId	opis	kategoria	dniOdDostawy	kwota	abuseScore	decision	reasons	refund
+L01	default: dzien przed koncem okna	inne	13	100.00	0.00	AUTO_APPROVED	WITHIN_POLICY	100.00
+L02	default: OSTATNI dzien okna	inne	14	100.00	0.00	REJECTED	WINDOW_EXPIRED	0
+L03	default: pierwszy dzien PO oknie	inne	15	100.00	0.00	REJECTED	WINDOW_EXPIRED	0
+L04	elektronika: ostatni dzien okna	elektronika	30	100.00	0.00	REJECTED	WINDOW_EXPIRED	0
+L05	elektronika: dzien po oknie	elektronika	31	100.00	0.00	REJECTED	WINDOW_EXPIRED	0
+L06	kategoria wykluczona	oprogramowanie-cyfrowe	1	100.00	0.00	REJECTED	CATEGORY_EXCLUDED	0
+L07	dokladnie prog kwotowy	inne	1	2000.00	0.00	AUTO_APPROVED	WITHIN_POLICY	2000.00
+L08	tuz powyzej progu kwotowego	inne	1	2001.00	0.00	MANUAL_REVIEW	AMOUNT_ABOVE_THRESHOLD	2001.00
+L09	prog przegladu naduzyc	inne	1	100.00	0.30	MANUAL_REVIEW	ABUSE_BORDERLINE	100.00
+L10	prog odrzucenia naduzyc	inne	1	100.00	0.60	REJECTED	ABUSE_SUSPECTED	0
+L11	po oknie ORAZ powyzej progu	inne	30	3000.00	0.00	REJECTED	AMOUNT_ABOVE_THRESHOLD,WINDOW_EXPIRED	0
+L12	dzien zero - zgloszenie w dniu dostawy	inne	0	100.00	0.00	AUTO_APPROVED	WITHIN_POLICY	100.00

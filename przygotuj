@@ -1,0 +1,162 @@
+#!/usr/bin/env bash
+#
+# ./przygotuj — stawia piaskownice pod zadanie.
+#
+#   ./przygotuj Z03             przygotuj katalog praca/Z03
+#   ./przygotuj Z03 --pokaz     tylko wypisz, co bym zrobil (nic nie robi)
+#   ./przygotuj Z03 --od-nowa   skasuj to, co bylo, i zacznij od zera
+#
+# Zadny krok nie jest magiczny. --pokaz wypisuje doslownie te komendy, ktore
+# skrypt wykona. Jesli wolisz zrobic to recznie - zrob, efekt bedzie ten sam.
+#
+# Kazde zadanie ma wlasny katalog w praca/. Nic nie dziedziczy po niczym,
+# wiec mozesz zaczac od dowolnego zadania i nic ci nie bedzie brakowac.
+#
+set -uo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$ROOT"
+
+CZERWONY=$'\033[31m'; ZIELONY=$'\033[32m'; ZOLTY=$'\033[33m'
+SZARY=$'\033[2m'; KONIEC=$'\033[0m'
+
+POKAZ=0
+
+blad() { printf "${CZERWONY}%s${KONIEC}\n" "$*" >&2; exit 1; }
+krok() { printf "  ${SZARY}%s${KONIEC}\n" "$*"; }
+
+# komenda — wypisuje, co robi, i robi to. Przy --pokaz tylko wypisuje.
+#
+# Chodzi o to, zeby ten skrypt nie byl czarna skrzynka. Widzisz doslownie te
+# komendy, ktore sie wykonaja. Mozesz je przepisac recznie i efekt bedzie ten sam.
+komenda() {
+  printf "  ${SZARY}$ %s${KONIEC}\n" "$*"
+  [ "$POKAZ" -eq 1 ] && return 0
+  "$@"
+}
+
+# --- petclinic --------------------------------------------------------------
+# Klonujemy z lokalnego cache'u, zeby nie zalezec od sieci w trakcie zajec,
+# i przypinamy na jednym commicie, zeby wszyscy mieli identyczny stan.
+
+CACHE=".tooling/cache/spring-petclinic"
+
+petclinic() {
+  local dest="$1"
+  local url commit
+  url=$(grep '^URL=' repo/petclinic/UPSTREAM | cut -d= -f2-)
+  commit=$(grep '^COMMIT=' repo/petclinic/UPSTREAM | cut -d= -f2-)
+
+  if [ ! -d "$CACHE" ]; then
+    krok "cache pusty, klonuje z $url (to potrwa)"
+    git clone --quiet --no-checkout "$url" "$CACHE" || blad "nie udalo sie sklonowac petclinica"
+  fi
+  if ! git -C "$CACHE" cat-file -e "$commit^{commit}" 2>/dev/null; then
+    krok "cache nie ma przypietego commita, dociagam"
+    git -C "$CACHE" fetch --quiet origin || blad "nie udalo sie dociagnac petclinica"
+  fi
+
+  krok "klon petclinica na przypietym commicie $commit"
+  komenda git clone --quiet --local --no-checkout "$CACHE" "$dest" || blad "klon sie nie udal"
+  komenda git -C "$dest" checkout --quiet -b warsztat "$commit" || blad "nie moge przelaczyc na $commit"
+  komenda git -C "$dest" remote set-url origin "$url"
+
+  krok "nakladka warsztatowa: WARSZTAT.md i .gitattributes"
+  komenda cp -r repo/petclinic/nakladka/. "$dest/"
+  [ "$POKAZ" -eq 1 ] && return 0
+  git -C "$dest" add -A >/dev/null 2>&1
+  git -C "$dest" -c user.name=warsztat -c user.email=warsztat@local \
+      commit --quiet --no-verify -m "Pliki warsztatowe" >/dev/null 2>&1
+}
+
+kata() {
+  krok "kata legacy-eligibility: kod bez testow + zlote wzorce"
+  komenda cp -r katy/legacy-eligibility/. "$1/"
+}
+
+template() {
+  krok "harness-template: dzialajacy system z bramka"
+  komenda mkdir -p "$1/harness-template"
+  komenda cp -r harness-template/. "$1/harness-template/"
+}
+
+handouty() {
+  krok "handouty i prompty (handouty odwoluja sie do promptow wzglednie)"
+  komenda cp -r zadania/Z08-agenci-krytyczni/handouts "$1/"
+  komenda cp -r zadania/Z08-agenci-krytyczni/prompty "$1/"
+}
+
+pusto() {
+  krok "pusty katalog - startujesz od zera, tak ma byc"
+}
+
+# --- co potrzebuje ktore zadanie -------------------------------------------
+
+przygotuj_zadanie() {
+  local z="$1" p="praca/$1"
+  komenda mkdir -p "$p"
+  case "$z" in
+    Z01) petclinic "$p/spring-petclinic" ;;
+    Z02) pusto "$p" ;;
+    Z03) petclinic "$p/spring-petclinic" ;;
+    Z04) petclinic "$p/spring-petclinic" ;;
+    Z05) petclinic "$p/spring-petclinic"
+         krok "intencja, od ktorej zaczyna sie przesluchanie"
+         komenda cp zadania/Z05-od-pomyslu-do-specyfikacji/INTENCJA.md "$p/"
+         ;;
+    Z06) petclinic "$p/spring-petclinic" ;;
+    Z07) petclinic "$p/spring-petclinic"
+         krok "narzedzie regul, zebys mial czym sprawdzac"
+         komenda mkdir -p "$p/spring-petclinic/tools"
+         komenda cp tools/repo_policy.py "$p/spring-petclinic/tools/"
+         krok "odcisk: sumy plikow testowych i lista zaleznosci ZANIM cokolwiek ruszysz"
+         komenda uv run tools/repo_policy.py "$p/spring-petclinic" --zapisz-odcisk
+         ;;
+    Z08) handouty "$p" ;;
+    Z09) kata "$p"; petclinic "$p/spring-petclinic" ;;
+    Z10) petclinic "$p/spring-petclinic" ;;
+    Z11) template "$p" ;;
+    Z12) template "$p" ;;
+    *)   blad "Nie znam zadania '$z'. Sa Z01..Z12." ;;
+  esac
+}
+
+# --- main -------------------------------------------------------------------
+
+pomoc() {
+  awk 'NR>1 && /^#/ { sub(/^# ?/, ""); print; next } NR>1 { exit }' "$0"
+  echo "Zadania: Z01 Z02 Z03 Z04 Z05 Z06 Z07 Z08 Z09 Z10 Z11 Z12"
+}
+
+ZAD="${1:-}"
+case "$ZAD" in
+  ""|-h|--help) pomoc; exit 0 ;;
+esac
+
+for arg in "$@"; do
+  [ "$arg" = "--pokaz" ] && POKAZ=1
+done
+
+if [ "$POKAZ" -eq 1 ]; then
+  printf "${ZOLTY}Tryb pokazu — nic nie wykonuje. Oto co bym zrobil dla %s:${KONIEC}\n\n" "$ZAD"
+  przygotuj_zadanie "$ZAD"
+  printf "\nTyle. Zadnej magii. Mozesz to przepisac recznie.\n"
+  exit 0
+fi
+
+if [ -d "praca/$ZAD" ] && [ -n "$(ls -A "praca/$ZAD" 2>/dev/null)" ]; then
+  if [ "${2:-}" = "--od-nowa" ]; then
+    printf "${ZOLTY}Kasuje praca/%s i zaczynam od nowa.${KONIEC}\n" "$ZAD"
+    rm -rf "praca/$ZAD"
+  else
+    printf "${ZOLTY}praca/%s juz istnieje i cos w nim jest.${KONIEC}\n" "$ZAD"
+    echo "Jesli chcesz zaczac od zera:  ./przygotuj $ZAD --od-nowa"
+    exit 0
+  fi
+fi
+
+echo "Przygotowuje $ZAD:"
+przygotuj_zadanie "$ZAD"
+printf "\n${ZIELONY}Gotowe.${KONIEC} Pracuj w praca/%s/\n" "$ZAD"
+echo "Opis zadania: zadania/$ZAD*/README.md"
+echo

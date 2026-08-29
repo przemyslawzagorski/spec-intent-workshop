@@ -1,0 +1,52 @@
+# Pipeline dla GitLaba.
+#
+# Porownaj ten plik z .github/workflows/ci.yml. Sa napisane w dwoch roznych
+# skladniach, przez dwa rozne narzedzia, i robia DOKLADNIE TO SAMO:
+#
+#     ./bramka
+#
+# To nie jest duplikacja. Jedno zrodlo regul, reszta to adaptery - tak samo
+# jak w kodzie. Tu jednym zrodlem jest `bramka`, a oba pliki CI sa adapterami
+# do platformy. Jesli kiedys bramka w CI zacznie sprawdzac cos, czego nie
+# sprawdza lokalnie, to sie rozjedzie i uslyszysz "u mnie dziala".
+
+stages: [bramka]
+
+bramka:
+  stage: bramka
+  image: maven:3.9-eclipse-temurin-25
+  timeout: 30 minutes
+
+  # Docker-in-Docker: Quarkus Dev Services potrzebuje demona, zeby postawic
+  # Postgresa i Redpande do testow. Bez tego testy nie ruszą.
+  services:
+    - name: docker:27-dind
+      alias: docker
+  variables:
+    DOCKER_HOST: tcp://docker:2375
+    DOCKER_TLS_CERTDIR: ""
+    TESTCONTAINERS_HOST_OVERRIDE: docker
+    MAVEN_OPTS: "-Dmaven.repo.local=$CI_PROJECT_DIR/.m2"
+
+  cache:
+    key:
+      files:
+        - returns-service/pom.xml
+        - scoring-worker/pyproject.toml
+    paths:
+      - .m2/
+      - scoring-worker/.venv/
+
+  before_script:
+    - curl -LsSf https://astral.sh/uv/install.sh | sh
+    - export PATH="$HOME/.local/bin:$PATH"
+
+  script:
+    - export PATH="$HOME/.local/bin:$PATH"
+    - ./bramka
+
+  artifacts:
+    when: always
+    paths:
+      - "**/target/surefire-reports/"
+    expire_in: 1 week

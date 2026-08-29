@@ -1,0 +1,10 @@
+# Koniec czasu na "u mnie dziala, a w CI nie". Wszystko tekstowe trzymamy w LF.
+* text=auto eol=lf
+*.sh    text eol=lf
+mvnw    text eol=lf
+*.bat   text eol=crlf
+*.cmd   text eol=crlf
+*.jar   binary
+*.png   binary
+*.gif   binary
+*.ico   binary

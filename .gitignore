@@ -1,0 +1,27 @@
+# Narzedzia pobierane lokalnie (JDK 25 ~380 MB, Maven, repozytorium m2).
+# NIE trafiaja do repo - kazdy pobiera je sobie w M0 skryptem z docs/setup/.
+.tooling/
+
+# Wyniki buildow
+target/
+**/target/
+.venv/
+__pycache__/
+*.pyc
+
+# Praca uczestnika. Repo dostarcza PUSTY workshop/ - to jest miejsce,
+# w ktorym kazdy buduje swoj wlasny wariant systemu.
+workshop/*
+!workshop/.gitkeep
+!workshop/README.md
+
+# Lokalne
+.env
+*.local
+.DS_Store
+
+# Pomiary z warsztatu - kazdy ma swoje
+bench.tsv
+
+# Piaskownice uczestnikow - kazdy ma swoje, nie commitujemy
+praca/

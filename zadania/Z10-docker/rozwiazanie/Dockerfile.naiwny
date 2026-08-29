@@ -1,0 +1,10 @@
+# Wersja naiwna - tak wychodzi, gdy poprosisz "zrob mi Dockerfile" i nie
+# powiesz nic wiecej. Dziala. Wszystko inne w niej jest nie tak.
+FROM eclipse-temurin:25-jdk
+
+WORKDIR /app
+COPY . .
+RUN ./mvnw package -DskipTests
+
+EXPOSE 8080
+CMD ["java", "-jar", "target/spring-petclinic-4.0.0-SNAPSHOT.jar"]

@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Warsztatowe settings.xml.
+
+  PO CO TO JEST:
+  Domyślne ~/.m2/settings.xml w sieci korporacyjnej zwykle zawiera
+  <mirror> z <mirrorOf>central</mirrorOf> wskazujący na wewnętrznego
+  Nexusa. Taki mirror przechwytuje WSZYSTKIE zapytania do Maven Central,
+  więc artefaktów, których Nexus nie ma (tu: Quarkus 3.35.1), nie da się
+  pobrać - a poza siecią firmową build nie ruszy w ogóle.
+
+  Ten plik nie definiuje żadnego mirrora, czyli idzie wprost do Central.
+
+  UŻYCIE (nie nadpisuje twojego ~/.m2/settings.xml):
+    ./mvnw -s ../../docs/setup/settings-central.xml verify
+
+  Z osobnym repozytorium lokalnym (zalecane na warsztacie - łatwo spakować
+  do paczki offline i nie miesza się z firmowymi artefaktami):
+    ./mvnw -s <ścieżka>/settings-central.xml -Dmaven.repo.local=<ścieżka>/m2 verify
+-->
+<settings xmlns="http://maven.apache.org/SETTINGS/1.0.0"
+          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.0.0
+                              https://maven.apache.org/xsd/settings-1.0.0.xsd">
+
+  <mirrors/>
+
+  <profiles>
+    <profile>
+      <id>central-direct</id>
+      <repositories>
+        <repository>
+          <id>central</id>
+          <url>https://repo.maven.apache.org/maven2</url>
+          <releases><enabled>true</enabled></releases>
+          <snapshots><enabled>false</enabled></snapshots>
+        </repository>
+      </repositories>
+      <pluginRepositories>
+        <pluginRepository>
+          <id>central</id>
+          <url>https://repo.maven.apache.org/maven2</url>
+          <releases><enabled>true</enabled></releases>
+          <snapshots><enabled>false</enabled></snapshots>
+        </pluginRepository>
+      </pluginRepositories>
+    </profile>
+  </profiles>
+
+  <activeProfiles>
+    <activeProfile>central-direct</activeProfile>
+  </activeProfiles>
+</settings>
