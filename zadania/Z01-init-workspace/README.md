@@ -70,30 +70,55 @@ Jeśli chcesz wiedzieć, co dokładnie robi — `./przygotuj Z01 --pokaz`.
 Nie czytaj wszystkiego — potrzebujesz tylko tyle, żeby napisać sensowne reguły.
 
 **2 · Napisz `AGENTS.md`.** Możesz poprosić agenta, ale przeczytaj, co napisał.
-Prompt masz w [prompty/reguly.md](prompty/reguly.md). Wymagania:
+Prompt masz w [prompty/reguly.md](prompty/reguly.md).
+
+Jeśli zainstalowałeś skille (krok 3 — możesz go zrobić najpierw), to jest
+dokładnie zadanie dla **`writing-for-agents`**. Jego opis brzmi:
+*„Use when creating or editing skills, or modifying AGENTS.md or CLAUDE.md"*.
+
+Wymagania:
 
 - mieści się w 2 KB,
 - wskazuje **konkretne pliki** jako wzorce,
 - ma sekcję „jak uruchamiać" z komendami, które naprawdę działają,
 - ma sekcję „czego nie zakładać".
 
-**3 · Zainstaluj skille** (3 min). Te, których użyjemy dziś:
+**3 · Zainstaluj skille** (3 min).
+
+> **Zrób to w korzeniu warsztatu, nie w piaskownicy.** Instalator zapisuje
+> skille do `.agents/skills/` **bieżącego katalogu**. Jeśli uruchomisz go
+> w `praca/Z01/spring-petclinic`, wylądują w katalogu, który skasujesz przy
+> `./przygotuj Z01 --od-nowa`, i nie będzie ich w pozostałych zadaniach.
 
 ```bash
-npx skills add mattpocock/skills -s grilling -s tdd -s domain-modeling
+cd ../../..     # do korzenia warsztatu
+npx skills@latest add mattpocock/skills -s grilling -s domain-modeling -s codebase-design -s tdd -s writing-for-agents
+cd praca/Z01/spring-petclinic
 ```
 
-**Co zobaczysz:** trzy katalogi, w każdym jeden plik `SKILL.md`. **Otwórz
-któryś.** To zwykły markdown — nagłówek z nazwą i opisem, pod nim instrukcja.
-Nic więcej. Żadnego kodu, żadnego API.
+**Co zobaczysz:** listę zainstalowanych skilli i przy każdym, na jakie narzędzia
+poszły — *„universal: GitHub Copilot, Amp, Cline…"*, a dla Claude Code
+*„symlinked"*. Powstaną dwa katalogi: `.agents/skills/` z plikami
+i `.claude/skills/` z dowiązaniami.
 
-Uwaga: forma `-s a,b,c` po przecinku **nie zadziała** — każdy skill potrzebuje
-własnej flagi `-s`.
+Na końcu instalator napisze: *„Review skills before use; they run with full
+agent permissions."* **Potraktuj to poważnie** — to jest tekst, który wleci
+do twoich promptów.
+
+**Otwórz któryś `SKILL.md`.** To zwykły markdown: nagłówek z nazwą i opisem,
+pod nim instrukcja. Nic więcej. Żadnego kodu, żadnego API.
+
+Dwie rzeczy, o które ludzie się potykają:
+
+- forma `-s a,b,c` po przecinku **nie działa** — każdy skill ma własną flagę `-s`,
+- **nie instaluj jednocześnie wtyczką i przez `npx`** (`claude plugins install
+  mattpocock-skills` to ta druga droga) — dostaniesz każdy skill podwójnie.
 
 **Jeśli twoje narzędzie nie ma skilli — nic nie szkodzi.** Otwierasz `SKILL.md`
 i wklejasz treść jako prompt. Efekt jest ten sam.
 
-Więcej o tym, czym są i dlaczego działają: [docs/skille.md](../../docs/skille.md).
+Więcej — w tym które skille działają od ręki, a które najpierw chcą konfiguracji
+repo: [docs/skille.md](../../docs/skille.md).
 
 **4 · Wstaw hook.** Napisz sam albo weź gotowy:
 

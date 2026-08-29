@@ -43,10 +43,16 @@ Ma też bramkę, która nie pozwoli mu poprawić testu zamiast kodu.
 
 **5 · Bramka.** `./bramka` — jedna komenda, ta sama co w CI.
 
-**Skille, które pasują do kroków 3–4:** `tdd` (najpierw test, potem kod)
-i `implement` (realizacja z gotowej specyfikacji). Oba z zestawu Matta Pococka.
-Bez nich prompt [prompty/pelny-cykl.md](prompty/pelny-cykl.md) robi to samo,
-tylko dłużej.
+**Skill, który tu pasuje:** `tdd` z zestawu Matta Pococka — najpierw test,
+potem kod. Działa od ręki, bez konfiguracji.
+
+Nie polecam tu `implement` ani `to-spec`, choć nazwy kuszą: obydwa zakładają,
+że repo ma skonfigurowany **issue tracker** (`to-spec` mówi wprost: *„The issue
+tracker and triage label vocabulary should have been provided to you"*).
+W piaskownicy warsztatowej go nie ma, więc skill zacznie od proszenia
+o konfigurację zamiast od roboty.
+
+Bez skilli prompt [prompty/pelny-cykl.md](prompty/pelny-cykl.md) robi to samo.
 
 ## Zrób to
 
@@ -83,9 +89,6 @@ z kolumnami `caseId`, `opis`, `category`, `daysSinceDelivery` i oczekiwaną decy
 
 Zwróć uwagę na `W04`–`W06`: to przypadki graniczne dla elektroniki — **29, 30
 i 31 dni**. Nikt ich nie wpisał ręcznie; policzył je generator z pliku polityki.
-
-Tabela przypadków testowych **wygenerowana z pliku polityki**. Zwróć uwagę
-na wiersze `W04`–`W06`: przypadki graniczne dla elektroniki, czyli 29, 30 i 31 dni.
 
 Teraz zmień `elektronika: 30` na `21` w `return-policy.yaml` i puść `./bramka`.
 

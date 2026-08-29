@@ -146,7 +146,7 @@ I sytuacja, gdy jesteś jedynym odbiorcą tej pracy i skończysz ją dziś.
 | **Oddaj spec sąsiadowi** | Ktoś inny implementuje z twojej specyfikacji, bez rozmowy z tobą. Wszystko, o co musi zapytać, to dziura w spec. | 25 |
 | **Spec dla czegoś, co już istnieje** | Napisz spec dla `OwnerController.processUpdateOwnerForm`, potem porównaj z kodem. Zobaczysz, ile reguł nie ma nigdzie zapisanych. | 20 |
 | **Krytyk specyfikacji** | Nowa sesja, prompt „znajdź w tej specyfikacji sprzeczności i luki". Zobacz, ile znajdzie w dokumencie, który uznałeś za skończony. | 20 |
-| **`to-tickets`** | Rozbij spec na bilety z zależnościami. Sprawdź, czy da się je robić równolegle. | 20 |
+| **`to-tickets`** | Rozbij spec na bilety z zależnościami. **Uwaga:** ten skill pisze do issue trackera, więc najpierw trzeba uruchomić `setup-matt-pocock-skills` — albo zrobić to samo promptem. | 20 |
 | **Grill na własnym backlogu** | Weź prawdziwe zadanie ze swojej pracy. Trzy rundy. To zwykle moment, w którym ludzie przestają traktować to jako ćwiczenie. | 20 |
 | **Skill `wait-what`** | Gdy agent odpowie coś, czego nie rozumiesz, każ mu to wytłumaczyć od nowa, prościej. | 10 |
 

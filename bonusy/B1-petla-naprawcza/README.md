@@ -87,6 +87,10 @@ zmiany, próbować obejść. **To jest moment, w którym najczęściej zmienia t
 **4 · Porównaj** (10 min). Który przebieg dał lepszy kod? Który był krótszy?
 Co agent powiedział, gdy pozwoliłeś mu się poddać?
 
+**Skill, który tu pasuje:** `diagnosing-bugs` z zestawu Pococka — pętla
+diagnostyczna do trudnych błędów i regresji wydajności. Działa bez konfiguracji.
+Warto porównać jego strukturę z tym, co sam napisałeś w warunkach stopu.
+
 ## Do omówienia
 
 - **Że „zatrzymaj się i zapytaj" to najbardziej niedoceniana instrukcja.**

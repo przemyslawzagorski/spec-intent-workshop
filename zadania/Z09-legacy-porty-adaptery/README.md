@@ -64,7 +64,10 @@ Potem następny.
   [rozwiazanie/skill-zlote-wzorce/SKILL.md](rozwiazanie/skill-zlote-wzorce/SKILL.md).
   Przydaje się za każdym razem, gdy trzeba ruszyć kod bez testów.
 - **`codebase-design`** — z zestawu Matta Pococka, o projektowaniu głębokich
-  modułów i granic. Do części 2.
+  modułów i granic. Do części 2. Działa od ręki.
+- **`characterization-tests`** z [airails](https://github.com/AdamBien/airails)
+  Adama Biena — **to jest dokładnie ta sama technika co nasza część 1**, tylko
+  cudzą ręką. Warto porównać, co ktoś inny uznał za istotne.
 
 ## Co się tu dzieje — przeczytaj, zanim zaczniesz
 
