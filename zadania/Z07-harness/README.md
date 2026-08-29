@@ -4,12 +4,69 @@
 
 ## O co chodzi
 
-Mówisz agentowi „napraw testy". Agent naprawia testy. Nie kod — testy.
-Zmienia `isOk()` na `is2xxSuccessful()` i melduje, że gotowe. `mvn test`
-świeci na zielono, piętnaście na piętnaście.
+Mówisz agentowi „napraw testy". Agent naprawia testy. **Nie kod — testy.**
+`mvn test` świeci na zielono, piętnaście na piętnaście, agent melduje gotowe.
+A test, który przed chwilą coś sprawdzał, teraz przepuszcza wszystko.
 
-Harness to zestaw sprawdzeń, których agent **nie może obejść**, robiąc dokładnie
-to, o co go poprosiłeś.
+W tym module budujesz coś, co to wyłapie.
+
+## Czym właściwie jest bramka
+
+Zanim pójdziemy dalej — bo za chwilę to słowo padnie sto razy.
+
+**Bramka to skrypt. Nic więcej.** Uruchamiasz go i albo kończy się zerem
+(w porządku, idź dalej), albo czymś innym (stop). Cała „magia" to kod wyjścia:
+
+```bash
+#!/usr/bin/env bash
+# ./bramka — jeden plik, który mówi „tak" albo „nie"
+
+mvn -q spring-javaformat:validate || exit 1   # format się zgadza?
+mvn -q test                       || exit 1   # testy zielone?
+grep -rq "TODO" src/main          && exit 1   # nasza własna reguła
+
+echo "OK"
+```
+
+Siedem linii. **To już jest bramka.**
+
+Skryptem staje się **bramką** dopiero wtedy, gdy coś od jego wyniku zależy:
+
+- **ty** uruchamiasz go przed commitem, zamiast czytać cały diff,
+- **CI** uruchamia **ten sam plik** przed scaleniem.
+
+Stąd cała jej wartość: **jedno miejsce, w którym zapisane jest, co znaczy
+„gotowe" w tym repo.** Nie w głowie seniora, nie w komentarzu do PR-a, nie
+w `AGENTS.md` jako prośba. W pliku, który zwraca 0 albo 1.
+
+Twoja bramka w tym zadaniu będzie robić trzy rzeczy, których `mvn test`
+nie robi:
+
+| | Co sprawdza | Czego `mvn test` o tym nie wie |
+|---|---|---|
+| **format** | czy kod trzyma styl projektu | wie, ale dopiero po 84 s |
+| **testy** | czy przechodzą | to akurat wie |
+| **`repo_policy.py`** | **czy ktoś nie ruszył samych testów** | **nie ma o tym pojęcia** |
+
+Ta trzecia rzecz jest powodem, dla którego ten moduł istnieje.
+
+### Skąd `repo_policy.py` wie, że test został zmieniony
+
+Żeby nie było magii: liczy **sumę kontrolną każdego pliku testowego** i zapisuje
+ją do `.odcisk-bramki`. `przygotuj` zrobił to za ciebie, zanim cokolwiek ruszyłeś:
+
+```
+$ head -3 .odcisk-bramki
+# Odcisk bramki. Nie edytuj recznie...
+[testy]
+a3f1c9e2b7d84501  src/test/java/.../OwnerControllerTests.java
+```
+
+Przy każdym uruchomieniu liczy sumy jeszcze raz i porównuje. Inna suma znaczy:
+**ten plik został zmieniony po tym, jak ustaliliśmy, że jest dobry.**
+
+To wszystko. Dwadzieścia linii Pythona, a łapie rzecz, której nie złapie
+żaden zestaw testów — bo testy sprawdzają kod, a nie same siebie.
 
 ## Jak zwykle to robimy
 
@@ -107,31 +164,78 @@ sumy kontrolne 20 plików testowych i lista 43 zależności z `pom.xml`.
 
 **1 · Zobacz problem na własne oczy** (10 min).
 
-**Najpierw ręcznie, w edytorze** — to nie jest komenda do wklejenia.
-Otwórz `src/test/java/.../owner/OwnerControllerTests.java` i w pierwszym
-napotkanym miejscu zamień:
+Otwórz `src/test/java/.../owner/OwnerControllerTests.java` i znajdź ten test
+(jest w okolicach linii 106):
+
+```java
+@Test
+void initCreationForm() throws Exception {
+    mockMvc.perform(get("/owners/new"))
+        .andExpect(status().isOk())
+        .andExpect(model().attributeExists("owner"))
+        .andExpect(view().name("owners/createOrUpdateOwnerForm"));
+}
+```
+
+**Czyta się to wprost:** wyślij `GET /owners/new`, a potem sprawdź trzy rzeczy —
+kod odpowiedzi, że w modelu jest obiekt `owner`, i że wybrał się właściwy widok.
+
+Interesuje nas pierwsza asercja.
+
+### Co znaczą te dwie metody
+
+| Metoda | Co dokładnie sprawdza |
+|---|---|
+| `status().isOk()` | kod odpowiedzi to **dokładnie 200** |
+| `status().is2xxSuccessful()` | kod odpowiedzi jest **gdziekolwiek w zakresie 200–299** |
+
+Czyli: 200, 201, 202, 204, 206… — dla drugiej metody wszystkie są w porządku.
+
+**Teraz zamień jedną na drugą.** Ręcznie, w edytorze — to nie jest komenda
+do wklejenia:
 
 ```
-.andExpect(status().isOk())          →   .andExpect(status().is2xxSuccessful())
+.andExpect(status().isOk())     →     .andExpect(status().is2xxSuccessful())
 ```
 
-Teraz uruchom testy:
+I uruchom testy:
 
 ```bash
 mvn test -Dtest=OwnerControllerTests
 ```
 
-**Co zobaczysz:**
+**Co zobaczysz** (po jakichś 25 sekundach):
 
 ```
 Tests run: 15, Failures: 0, Errors: 0, Skipped: 0
 BUILD SUCCESS
 ```
 
-Piętnaście na piętnaście. Test jest teraz słabszy — przepuści każdą odpowiedź
-2xx zamiast dokładnie 200 — i **nic tego nie widzi**. Trwa to około 25 sekund.
+### Dlaczego to przeszło — i dlaczego to jest złe
 
-Teraz to samo, ale przez regułę:
+Przeszło, bo **kontroler nadal zwraca 200**, a 200 mieści się w przedziale
+200–299. Z punktu widzenia tego uruchomienia nic się nie zmieniło.
+
+Ale test **przestał sprawdzać to, po co go napisano.** Wcześniej pilnował,
+że ten endpoint zwraca konkretnie 200. Teraz przepuści też:
+
+- **201 Created** — endpoint nagle coś tworzy zamiast pokazać formularz,
+- **204 No Content** — odpowiedź jest pusta, formularza nie ma,
+- **299 czegokolwiek** — cokolwiek, byle w przedziale.
+
+**Żadnej z tych zmian ten test już nie zauważy.** Ktoś przepisze kontroler
+za pół roku, zwróci 204, testy będą zielone, a strona pusta.
+
+To nie jest teoria: **dokładnie tak wygląda „naprawienie testu"**. Agent
+poproszony o zielony build robi najmniejszą zmianę, która daje zielony build —
+i formalnie ma rację. Nikt mu nie powiedział, że asercja ma zostać tak samo
+ostra.
+
+**I żaden build nigdy ci tego nie zgłosi.** `mvn test` widzi 15/15. CI widzi
+15/15. Przegląd kodu widzi jedną zmienioną linię w teście, przy dwudziestu
+innych zmianach w PR-ze.
+
+### Kto to zauważy
 
 ```bash
 uv run tools/repo_policy.py .
@@ -144,6 +248,13 @@ FAIL  1 naruszen regul:
       [2] plik testowy ZMIENIONY po zapisaniu odcisku: src/test/java/.../OwnerControllerTests.java
       Czerwony test to informacja o kodzie, nie problem do usuniecia.
 ```
+
+Zwróć uwagę: reguła **nie wie, co się zmieniło** i nie próbuje oceniać, czy
+zmiana była dobra. Wie tylko, że **suma kontrolna pliku testowego się nie zgadza**
+— czyli ktoś ruszył test po tym, jak ustaliliśmy, że jest dobry.
+
+To wystarczy, żeby zmiana testu przestała być cicha. A o to chodzi: nie o zakaz,
+tylko o to, żeby **wymagała decyzji człowieka**.
 
 **To jest cały ten moduł w dwóch komendach.** Przywróć zmianę i idź dalej:
 
@@ -170,8 +281,44 @@ nie odpala przed commitem, nie jest bramką. Więc:
 To pięć linii w skrypcie i zmienia sposób, w jaki będziesz z niej korzystać.
 
 **Uwaga, co jest twoje, a co dostałeś:** `tools/repo_policy.py` jest gotowy —
-to silnik trzech reguł. Twoją pracą jest **opakowanie i decyzje**: co dajesz
-do HARD, co do SOFT, w jakiej kolejności i jaki komunikat dostanie kolega.
+to silnik trzech reguł. **Twoją pracą są decyzje**, nie składnia basha:
+co dajesz do HARD, co do SOFT, w jakiej kolejności i jaki komunikat dostanie kolega.
+
+Żebyś nie zaczynał od pustej kartki — oto cały mechanizm:
+
+```bash
+#!/usr/bin/env bash
+BLEDY=0
+
+hard() { "${@:2}" >/dev/null 2>&1 && echo "  ok    $1" || { echo "  BLAD  $1"; BLEDY=$((BLEDY+1)); }; }
+soft() { "${@:2}" >/dev/null 2>&1 && echo "  ok    $1" || echo "  uwaga $1"; }
+
+hard "formatowanie"  mvn -B -q spring-javaformat:validate
+hard "testy"         mvn -B test
+soft "brak TODO"     bash -c '! grep -rq TODO src/main'
+
+exit $(( BLEDY > 0 ))
+```
+
+**Różnica między `hard` a `soft` to jedna linia:** pierwsza zwiększa licznik
+błędów, druga nie. Cała reszta to twoje decyzje, które sprawdzenie gdzie trafi.
+
+### Z czego wybierać
+
+Nie musisz wymyślać sprawdzeń od zera. Oto, co **naprawdę** da się sprawdzić
+w tym repo — a które gdzie, decydujesz ty:
+
+| Sprawdzenie | Jak | Ile trwa |
+|---|---|---|
+| formatowanie | `mvn spring-javaformat:validate` | 6 s |
+| testy | `mvn test` | 84 s |
+| testy nietknięte, brak nowych zależności | `uv run tools/repo_policy.py .` | 1 s |
+| nikt nie wyłączył testu | `grep -rE '@(Disabled\|Ignore)([^A-Za-z]\|$)' src/test` | 0 s |
+| liczba testów nie spadła | policz `@Test` i porównaj z zapisaną liczbą | 0 s |
+| build nie zwolnił | zmierz `mvn -DskipTests package` i porównaj z progiem | 40 s |
+
+**Wybierz 4–6.** Więcej nie znaczy lepiej — bramka, która krzyczy przy każdym
+uruchomieniu, przestaje być czytana.
 
 **3 · Złam własną bramkę** (15 min).
 
