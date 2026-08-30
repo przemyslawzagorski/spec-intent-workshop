@@ -2,7 +2,6 @@ package org.springframework.samples.petclinic.owner;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 
 import org.junit.jupiter.api.Test;
 
@@ -15,23 +14,20 @@ import static org.assertj.core.api.Assertions.assertThat;
  * Zadnego kontekstu, zadnej bazy, zadnego mocka frameworka.
  *
  * Przed refaktorem ta sama regula dala sie sprawdzic tylko przez warstwe webowa -
- * OwnerControllerTests startuje kontekst i trwa okolo 5,6 sekundy na 15 testow. Ten plik
- * wykonuje sie w milisekundach.
+ * OwnerControllerTests startuje kontekst Springa i trwa SEKUNDY na 15 testow - ile
+ * dokladnie, zalezy od maszyny i od tego, czy kontekst wstaje pierwszy raz. Ten plik
+ * wykonuje sie w milisekundach i ta liczba nie skacze, bo nic tu nie startuje.
+ * Zmierzone warunki: rozwiazanie/POMIAR.md.
  *
  * To jest cala oplacalnosc portow i adapterow, wyrazona w jednostce, ktora czujesz
  * codziennie: dlugosci petli zwrotnej.
  */
 class UpdateOwnerTests {
 
-	/** Adapter testowy. Piec linii zamiast bazy danych. */
+	/** Adapter testowy. Cztery linie zamiast bazy danych. */
 	static class OwnersInMemory implements Owners {
 
 		final List<Owner> zapisani = new ArrayList<>();
-
-		@Override
-		public Optional<Owner> findById(Integer id) {
-			return this.zapisani.stream().filter(o -> id.equals(o.getId())).findFirst();
-		}
 
 		@Override
 		public void save(Owner owner) {

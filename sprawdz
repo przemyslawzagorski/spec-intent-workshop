@@ -299,7 +299,7 @@ Z09() {
       f=\$(ls '$p'/wzorce/*.tsv 2>/dev/null | head -1)
       test -n \"\$f\" && [ \$(tail -n +2 \"\$f\" | wc -l) -ge 8 ]"
   musi  "wzorce sie odtwarzaja"  bash -c "
-      cd '$p' && javac -d . legacy/*.java OdtworzWzorce.java 2>/dev/null &&
+      cd '$p' && javac -d . legacy/*.java Bodzce.java OdtworzWzorce.java 2>/dev/null &&
       java OdtworzWzorce wzorce/return-eligibility.tsv >/dev/null"
   warto "jest notatka z decyzja"  test -f "$p/DECYZJA.md"
 
@@ -331,7 +331,10 @@ Z09() {
       grep -rl '$nazwa' '$t' 2>/dev/null |
         xargs -r grep -lE '@Test' |
         xargs -r grep -LE '^@(SpringBootTest|WebMvcTest|DataJpaTest)' | grep -q ."
-  warto "pelne testy przechodza"  bash -c "
+  # HARD, nie SOFT. Kryterium jest z Z07: "testy czerwone" to HARD. Refaktor,
+  # po ktorym zestaw testow nie przechodzi, nie jest zrobiony - a modul, ktory
+  # uczy o siatce bezpieczenstwa, nie moze mowic "Gotowe" przy czerwonych testach.
+  musi  "pelne testy przechodza"  bash -c "
       cd '$q' && mvn -B -q -s '$ROOT/docs/setup/settings-central.xml' -Dmaven.repo.local='$ROOT/.tooling/m2' test 2>&1 | grep -E 'ERROR|BUILD FAILURE' | head -3
       exit \${PIPESTATUS[0]}"
   podsumuj

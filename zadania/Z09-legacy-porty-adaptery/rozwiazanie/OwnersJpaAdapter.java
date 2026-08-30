@@ -1,7 +1,5 @@
 package org.springframework.samples.petclinic.owner;
 
-import java.util.Optional;
-
 import org.springframework.stereotype.Component;
 
 /**
@@ -17,11 +15,6 @@ class OwnersJpaAdapter implements Owners {
 
 	OwnersJpaAdapter(OwnerRepository repository) {
 		this.repository = repository;
-	}
-
-	@Override
-	public Optional<Owner> findById(Integer id) {
-		return this.repository.findById(id);
 	}
 
 	@Override

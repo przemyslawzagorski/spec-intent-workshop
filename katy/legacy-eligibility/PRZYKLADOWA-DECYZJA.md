@@ -10,7 +10,9 @@ if (days >= window) {
 }
 ```
 
-Kontrakt (`docs/contract/decision-procedure.md`, sekcja *Granice*) wymaga `>`.
+Kontrakt (`harness-template/docs/contract/decision-procedure.md`, sekcja
+*Granice — czytaj uważnie*) wymaga `>`, i mówi wprost, że `>=` to najczęstszy
+błąd graniczny w tym miejscu.
 
 **Skutek:** zwrot zgłoszony **dokładnie w ostatnim dniu okna** jest odrzucany.
 Klient, który zdążył w czternastym dniu, dostaje odmowę.
@@ -35,12 +37,31 @@ z biznesem, nie decyzji programisty.
 
 **Zamrażam, nie naprawiam w tym kroku.**
 
-Złoty wzorzec `W_boundary_exact` zostaje **z zachowaniem błędnym** i z jawnym
-komentarzem, że utrwala znany defekt. Refaktor przeprowadzam za tą siatką —
+Złoty wzorzec `L02` zostaje **z zachowaniem błędnym** i z jawnym komentarzem,
+że utrwala znany defekt. Refaktor przeprowadzam za tą siatką —
 zachowanie się nie zmienia.
 
 Naprawa idzie osobnym zgłoszeniem, z decyzją biznesu i zmianą złotego wzorca
 jako **świadomą zmianą kontraktu**.
+
+## Obserwacje do sprawdzenia z człowiekiem
+
+Prompt każe wypisać osobno to, co wygląda podejrzanie, ale czego **nie
+rozstrzygam sam**. Z nagrania wyszły trzy takie rzeczy i żadnej nie ruszam:
+
+| Wzorzec | Co robi kod | Pytanie do zadania |
+|---|---|---|
+| `L16` | zgłoszenie **bez żadnej pozycji** → `AUTO_APPROVED`, zwrot `0` | czy pusty wniosek ma być w ogóle przyjmowany? |
+| `L17` | SKU, **którego nie ma w zamówieniu** → `AUTO_APPROVED`, zwrot `0` | czy ktoś może zgłosić zwrot rzeczy, której nie kupił? |
+| `L14`, `L15` | brak danych → `REJECTED`, ale kwota zwrotu to **`null`**, a nie `0` | czy coś w dole systemu robi na tym arytmetykę? |
+
+Żadna z nich nie jest „błędem", dopóki ktoś nie powie, jak ma być. Wszystkie
+trzy są **nagrane takie, jakie są** — bo gdyby nie były, refaktor mógłby je
+po cichu zmienić i nikt by się nie dowiedział.
+
+`L17` jest tu najciekawszy: to nie wygląda na przeoczenie w jednej linii, tylko
+na skutek uboczny pętli, która nie ma czego dopasować i po prostu nic nie robi.
+**Takich rzeczy nie znajduje się czytaniem kodu — znajduje się je nagrywaniem.**
 
 > Agent wykrył to w trzydzieści sekund i naprawiłby w kolejne trzydzieści.
 > Nie wiedziałby, że dział prawny oparł na tym zachowaniu zapis w regulaminie.

@@ -77,7 +77,7 @@ pogubić, więc po kolei:
 | | Część 1: kata | Część 2: petclinic |
 |---|---|---|
 | **Czego uczy** | jak **zabezpieczyć się** przed zmianą zachowania | jak **zmienić strukturę**, gdy już jesteś zabezpieczony |
-| **Na czym** | 161 linii, zero testów, czysty `javac` | prawdziwy Spring, 76 testów |
+| **Na czym** | 161 linii, zero testów, czysty `javac` | prawdziwy Spring, 79 testów |
 | **Co robisz** | nagrywasz wyjścia, „poprawiasz" błąd, oglądasz rozjazd | wydzielasz port, adapter i przypadek użycia |
 | **Ile trwa** | 25 min, pętla dwie sekundy | 30 min, pętla 23 sekundy |
 | **Co zostaje** | `DECYZJA.md` | cztery pliki i szybki test |
@@ -96,33 +96,49 @@ cd praca/Z09
 source ../../.tooling/env.sh
 ```
 
+> **Windows:** uruchamiaj w **Git Bash** albo WSL, nie w PowerShellu.
+> W PowerShellu `./przygotuj` kończy się bez komunikatu i bez efektu, a `source`
+> nie istnieje. Sam `javac` i `java` działają wszędzie — chodzi o skrypty wokół.
+
 `ReturnEligibilityService` — 161 linii, zero testów, kilka reguł biznesowych
 i przynajmniej jeden błąd. Czysty `javac`, bez Mavena, pętla dwie sekundy.
 
 **1 · Nagraj** (5 min):
 
 ```bash
-javac -d . legacy/*.java Nagraj.java
+javac -d . legacy/*.java Bodzce.java Nagraj.java
 java Nagraj > wzorce/return-eligibility.tsv
 head -3 wzorce/return-eligibility.tsv
 ```
 
 **Co zobaczysz:** trzy pierwsze wiersze pliku TSV — nagłówek i dwa przypadki
-z identyfikatorami `L01`, `L02`. Cały plik ma **dwanaście przypadków**.
+z identyfikatorami `L01`, `L02`. Cały plik ma **siedemnaście przypadków**.
 
 **Nie czytaj ich krytycznie.** To jest zdjęcie stanu obecnego, nie lista życzeń.
+
+Zerknij jednak na cztery ostatnie wiersze, bo są tam z konkretnego powodu:
+
+| | Co się dzieje |
+|---|---|
+| `L14`, `L15` | brak zamówienia albo zgłoszenia → `REJECTED / INVALID_INPUT`, ale **kwota zwrotu to `null`**, bo ta gałąź nigdy jej nie ustawia |
+| `L16` | zgłoszenie **bez pozycji** → `AUTO_APPROVED` |
+| `L17` | SKU, którego **nie ma w zamówieniu** → `AUTO_APPROVED` |
+
+Zwrot pustego zgłoszenia jest zatwierdzany automatycznie. Nikt tego nie
+zaprojektował — tak po prostu wychodzi z pętli, która nie ma czego dopasować.
+**Nagrywasz to bez poprawiania.** Czy to błąd, rozstrzygasz w kroku 4.
 
 **2 · Sprawdź, że siatka trzyma** (2 min):
 
 ```bash
-javac -d . legacy/*.java OdtworzWzorce.java
+javac -d . legacy/*.java Bodzce.java OdtworzWzorce.java
 java OdtworzWzorce wzorce/return-eligibility.tsv
 ```
 
 **Co zobaczysz:**
 
 ```
-OK    12 zlotych wzorcow odtworzonych bez rozjazdu
+OK    17 zlotych wzorcow odtworzonych bez rozjazdu
 ```
 
 Cała pętla — kompilacja i odtworzenie — trwa **około dwóch sekund**. To celowe:
@@ -139,16 +155,20 @@ Wygląda źle, prawda? Okno trzydziestodniowe powinno obejmować trzydziesty dzi
 Zmień na `>` i odtwórz wzorce.
 
 ```bash
-javac -d . legacy/*.java OdtworzWzorce.java && java OdtworzWzorce wzorce/return-eligibility.tsv
+javac -d . legacy/*.java Bodzce.java OdtworzWzorce.java && java OdtworzWzorce wzorce/return-eligibility.tsv
 ```
 
 Dostaniesz:
 
 ```
-  nagrane:   REJECTED / WINDOW_EXPIRED
-  faktyczne: AUTO_APPROVED / WITHIN_POLICY
-FAIL  1 z 12 wzorcow sie rozjechalo.
+ROZJAZD L02  (default: OSTATNI dzien okna)
+  nagrane:   REJECTED / WINDOW_EXPIRED / zwrot 0
+  faktyczne: AUTO_APPROVED / WITHIN_POLICY / zwrot 100.00
+FAIL  1 z 17 wzorcow sie rozjechalo.
 ```
+
+**Jeden rozjazd na siedemnaście — dokładnie ten, który zmieniłeś.** Siatka nie
+mówi, że zrobiłeś źle. Mówi, że zrobiłeś **coś**, i pokazuje co.
 
 **4 · Zdecyduj jako człowiek** (10 min). Zapisz decyzję w `DECYZJA.md`:
 czy to był błąd, czy reguła? Skąd wiesz? Co robisz dalej i w jakiej kolejności?
@@ -177,10 +197,11 @@ Prompt: [prompty/refaktor.md](prompty/refaktor.md).
 Cel:
 
 - **port** — interfejs opisujący, czego logika potrzebuje od składowania.
-  Dwie metody, nie czterdzieści dziedziczone po `JpaRepository`.
+  Tyle metod, ile ta logika naprawdę woła — nie czterdzieści dziedziczone
+  po `JpaRepository`.
 - **adapter** — klasa łącząca port ze Spring Data. Cała wiedza o JPA kończy się tutaj.
 - **przypadek użycia** — klasa z regułą, zwracająca **wynik**, nie nazwę widoku.
-- **test bez Springa** — z atrapą portu na pięć linii.
+- **test bez Springa** — z atrapą portu na kilka linii.
 
 ```bash
 cd ../../.. && ./sprawdz Z09
@@ -188,15 +209,24 @@ cd ../../.. && ./sprawdz Z09
 
 **Co zobaczysz:** dwie sekcje — `kata:` i `petclinic:` — razem siedem sprawdzeń.
 Ostatnie (`pelne testy przechodza`) uruchamia cały zestaw petclinica
-i trwa **około 80 sekund**, więc nie przejmuj się, jeśli konsola milczy.
+i trwa **około 75 sekund** (zmierzone, patrz [rozwiazanie/POMIAR.md](rozwiazanie/POMIAR.md)),
+więc nie przejmuj się, jeśli konsola milczy.
 
 ### Jak poznać, że zrobiłeś to dobrze
 
 Cztery rzeczy, wszystkie sprawdzalne:
 
-1. **Port ma tyle metod, ile logika naprawdę używa.** U mnie dwie. Jeśli
-   przepisałeś `JpaRepository` — to nie jest port, to jest ta sama zależność
-   pod nową nazwą.
+1. **Port ma tyle metod, ile logika naprawdę używa.** U mnie wyszła **jedna** —
+   i to jest ciekawsze, niż wygląda. Pisząc rozwiązanie, dołożyłem tam
+   `findById`, bo przy słowie „aktualizacja" wydaje się oczywiste, że trzeba
+   najpierw pobrać. Nie trzeba: obiekt przychodzi z formularza, a ten przypadek
+   użycia go tylko zapisuje. Metoda nie miała **ani jednego wołającego** —
+   i przez jakiś czas stała w materiale jako wzór. Jeśli przepisałeś
+   `JpaRepository` albo dołożyłeś metodę „bo się przyda" — to nie jest port,
+   to jest ta sama zależność pod nową nazwą.
+
+   Sprawdź to u siebie mechanicznie: wyszukaj każdą metodę portu i policz
+   wywołania poza adapterem i atrapą testową. Zero wywołań to zero metody.
 2. **Klasa z regułą nie importuje niczego z `org.springframework.web`.**
    Zero `BindingResult`, zero `RedirectAttributes`, zero nazw widoków.
 3. **Test reguły nie ma żadnej adnotacji Springa** i wykonuje się w milisekundach.
@@ -219,11 +249,34 @@ Pogadamy o:
   mówi, **co się zmieniło**. Decyzja zostaje przy tobie i to jest właściwy podział pracy.
 - **Dlaczego nie wolno poprawić nagrania.** Bo wtedy dostaniesz zielony refaktor
   i zmienione zachowanie, czyli najgorszy możliwy wynik: pewność bez pokrycia.
+- **Siatka chroni dokładnie to, co porównuje — ani grama więcej.** Nasz
+  odtwarzacz przez pewien czas czytał z nagrania decyzję i powody, ale **nie
+  kwotę zwrotu**, choć kwota stała w pliku, w osobnej kolumnie. Efekt: refaktor
+  ścinający każdy zwrot o 10% przechodził na zielono. Wyjście zapisane, ale
+  nieporównywane, nie jest chronione — jest tylko dekoracją.
+
+  **Zrób to na sali, trwa dziesięć sekund:** zmień w `legacy` ostatnią linię
+  `check` tak, żeby zwrot był `amount.multiply(new BigDecimal("0.90"))`,
+  i odtwórz wzorce. Dostaniesz rozjazd na `L01`, `L07`, `L08`. Potem zapytaj,
+  ile takich niepilnowanych wyjść ma wasza siatka w pracy.
+- **I druga strona tego samego.** Usuń z `check` cały strażnik `null` na początku
+  metody. Rozjazd na `L14` i `L15` — dlatego, że ktoś **zadał sobie trud
+  nagrania przypadków z brakującymi danymi**. Gdyby siatka miała tylko
+  „normalne" wejścia, wycięcie całej gałęzi obsługi błędu przeszłoby bez słowa.
+  Siatka jest tak dobra jak zbiór bodźców, nie jak narzędzie.
 - **Liczbach z części drugiej.** Po refaktorze `UpdateOwnerTests` — trzy testy
-  reguły, bez Springa, bez bazy — wykonuje się w **0,011 s**.
-  `OwnerControllerTests`, które sprawdzają to samo przez warstwę webową, trwają
-  **1,451 s**. Sto trzydzieści razy dłużej. **To jest waluta, w której opłaca się
-  liczyć porty i adaptery: długość pętli zwrotnej, nie czystość diagramu.**
+  reguły, bez Springa, bez bazy — wykonuje się w **0,021 s**.
+  `OwnerControllerTests`, które sprawdzają to samo przez warstwę webową, trwały
+  w tym samym przebiegu **12,0 s**. **To jest waluta, w której opłaca się liczyć
+  porty i adaptery: długość pętli zwrotnej, nie czystość diagramu.**
+
+  **Podaj rząd wielkości, nie mnożnik.** Wcześniejsze wersje tego materiału
+  miały tu 1,451 s, a komentarz w kodzie 5,6 s — obie liczby prawdziwe, obie
+  z innej maszyny i innego momentu. Czas testu webowego zależy od tego, czy
+  kontekst Springa wstaje pierwszy raz i czy JVM jest rozgrzana; czas testu
+  reguły nie zależy od niczego, bo nic tam nie startuje. **Stabilny jest tylko
+  rząd wielkości: milisekundy kontra sekundy.** Protokół i warunki pomiaru:
+  [rozwiazanie/POMIAR.md](rozwiazanie/POMIAR.md).
 - **Że refaktor zmusił do zmiany testu.** `@WebMvcTest(OwnerController.class)`
   przestał się składać, bo kontroler dostał nowego współpracownika. Trzeba było
   dopisać `@Import(UpdateOwner.class)`. **To jest legalna zmiana testu** — zmienił
@@ -253,14 +306,18 @@ gdzie testy są wolne albo gdzie reguła jest zaklinowana we frameworku.
 
 **Kata:** [../../katy/legacy-eligibility/PRZYKLADOWA-DECYZJA.md](../../katy/legacy-eligibility/PRZYKLADOWA-DECYZJA.md)
 
+**Pomiar:** [rozwiazanie/POMIAR.md](rozwiazanie/POMIAR.md) — ile naprawdę trwa
+pętla zwrotna, w jakich warunkach zmierzone i dlaczego ta liczba skacze.
+
 **Petclinic:** [rozwiazanie/](rozwiazanie/) — cztery nowe pliki i dwa diffy.
-Sprawdzone: pełny zestaw **79 testów, zero błędów**.
+Sprawdzone na przypiętym commicie: **77 testów uruchomionych, 2 pominięte,
+zero błędów, `BUILD SUCCESS`**.
 
 | Plik | Co to |
 |---|---|
-| `Owners.java` | port — dwie metody, zdefiniowane przez tego, kto ich używa |
+| `Owners.java` | port — **jedna** metoda, bo tyle woła logika. Przeczytaj komentarz: przez chwilę były dwie |
 | `OwnersJpaAdapter.java` | adapter — jedyne miejsce, które wie o Spring Data |
 | `UpdateOwner.java` | reguła, zwraca wynik zamiast nazwy widoku |
-| `UpdateOwnerTests.java` | trzy testy, atrapa portu na pięć linii, zero Springa |
+| `UpdateOwnerTests.java` | trzy testy, atrapa portu na cztery linie, zero Springa |
 | `OwnerController.diff` | kontroler schudł do tłumaczenia wyniku na HTTP |
 | `OwnerControllerTests.diff` | wymuszona zmiana plastra testowego, z uzasadnieniem |
