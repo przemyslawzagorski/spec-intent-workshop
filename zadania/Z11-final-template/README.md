@@ -138,6 +138,16 @@ Rzeczy, które musisz rozstrzygnąć **zanim** agent zacznie pisać:
 cd ../../.. && ./sprawdz Z11
 ```
 
+**Co sprawdza `./sprawdz Z11`.** Nie „czy testy są zielone" — template przychodzi
+zielony i to nic nie znaczy. Sprawdza **ślady trzech ostatnich kroków cyklu**:
+czy `docs/contract/openapi.yaml` zna parametr `customerId`, czy jakiś test go
+wspomina, i czy **bramka template'u jest otwarta**. Ta ostatnia robi więcej niż
+`mvn test`: waliduje politykę, przegenerowuje tabelę decyzji z aktualnego pliku
+i pilnuje, żeby warstwa `control` nie wiedziała o HTTP.
+
+Kolejność sprawdzeń jest kolejnością cyklu. Jeśli zaczniesz od kodu, pierwsze
+dwie linie powiedzą ci o tym wprost.
+
 **5 · Najważniejszy krok całego warsztatu** (10 min).
 
 Wszystko powyżej działo się na naszym repo. **Ta rzecz ma się wydarzyć u ciebie.**

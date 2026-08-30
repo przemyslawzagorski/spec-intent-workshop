@@ -423,14 +423,39 @@ Z10() {
 Z11() {
   echo "Z11 - gotowy template:"
   srodowisko
+  # Bez awaryjnego przejscia na harness-template/ z repo. Poprzednia wersja
+  # robila tak po cichu, wiec ./sprawdz Z11 konczylo sie "Gotowe." nawet wtedy,
+  # gdy piaskownicy w ogole nie bylo - bramka testowala nietkniety oryginal.
   local p="praca/Z11/harness-template"
-  [ -d "$p" ] || p="harness-template"
-  musi  "template na miejscu"  test -f "$p/returns-service/pom.xml"
-  musi  "testy Javy zielone"   bash -c "
-      cd '$p/returns-service' && mvn -B -s '$ROOT/docs/setup/settings-central.xml' \
-        -Dmaven.repo.local='$ROOT/.tooling/m2' test"
-  musi  "testy Pythona zielone" bash -c "
-      cd '$p/scoring-worker' && POLICY_FILE=../return-policy.yaml uv run --group dev pytest -q"
+
+  musi  "piaskownica stoi"  bash -c "
+      test -f '$p/returns-service/pom.xml' && exit 0
+      echo 'nie ma $p'
+      echo 'uruchom: ./przygotuj Z11'
+      exit 1"
+
+  # Cykl to spec -> kontrakt -> test -> kod -> bramka. Sprawdzamy slady
+  # trzech ostatnich krokow, bo tylko one zostaja w plikach.
+  musi  "kontrakt zna nowy endpoint"  bash -c "
+      grep -q 'customerId' '$p/docs/contract/openapi.yaml' 2>/dev/null && exit 0
+      echo 'w docs/contract/openapi.yaml nie ma parametru customerId.'
+      echo 'Zadanie: GET /returns?customerId={uuid} - kontrakt jest krokiem 2,'
+      echo 'przed testem i przed kodem.'
+      exit 1"
+
+  musi  "jest test nowego endpointu"  bash -c "
+      grep -rq 'customerId' '$p/returns-service/src/test' 2>/dev/null && exit 0
+      echo 'zaden test nie wspomina customerId.'
+      echo 'Krok 3 cyklu: test powstaje PRZED kodem i ma byc czerwony.'
+      exit 1"
+
+  # To jest pointa calego modulu: cykl konczy sie bramka, nie zielonym mvn test.
+  # Bramka template'u sprawdza wiecej niz same testy - polityke, tabele decyzji
+  # wygenerowana z aktualnego pliku i to, czy warstwa control nie wie o HTTP.
+  musi  "bramka template'u otwarta"  bash -c "
+      cd '$p' || exit 1
+      export MAVEN_ARGS='-s $ROOT/docs/setup/settings-central.xml -Dmaven.repo.local=$ROOT/.tooling/m2'
+      ./bramka"
   podsumuj
 }
 
