@@ -11,6 +11,15 @@ a jedyną specyfikacją jest kod.
 Dwie części. Najpierw kata: jak zbudować siatkę pod kodem, którego nie rozumiesz.
 Potem prawdziwy refaktor na petclinicu.
 
+> **Kata** — słowo z karate: krótka, ustalona sekwencja ruchów, którą powtarzasz,
+> aż przestaniesz o niej myśleć. Do programowania przeniósł je Dave Thomas
+> w 2003 jako *code kata*: **małe, zamknięte ćwiczenie, w którym nie chodzi
+> o wynik, tylko o technikę.** Rozwiązanie znasz — ćwiczysz ruch.
+>
+> Nasza to 161 linii Javy, czysty `javac`, bez Mavena i bez Dockera, pętla dwie
+> sekundy. Możesz ją zrobić dziś i za miesiąc jeszcze raz; ćwiczysz jedną rzecz:
+> **nagraj zachowanie, zanim je zmienisz.**
+
 ## Jak zwykle to robimy
 
 „Zrefaktoryzuj mi tę klasę." Agent przepisuje. Wygląda ładnie, kompiluje się,
