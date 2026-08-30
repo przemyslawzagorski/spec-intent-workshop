@@ -5,6 +5,9 @@
 #      kazda zmiane kodu. Bez tego kazdy build ciagnie 151 MB od nowa.
 #   2. do obrazu koncowego trafia JRE i jeden jar, a nie JDK, Maven i zrodla.
 
+# Petclinic celuje w Jave 17, a my budujemy na 25 i uruchamiamy na JRE 25.
+# To jest w porzadku: kompilator 25 wypuszcza bajtkod dla release 17, a nowsza
+# maszyna go uruchamia. Odwrotnie by nie dzialalo.
 FROM maven:3.9-eclipse-temurin-25 AS build
 WORKDIR /build
 

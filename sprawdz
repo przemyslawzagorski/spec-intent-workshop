@@ -147,7 +147,7 @@ sprawdz_material() {
   musi "kata odtwarza zlote wzorce" bash -c "
       tmp=\$(mktemp -d)
       cp -r katy/legacy-eligibility/. \"\$tmp/\" &&
-      cd \"\$tmp\" && javac -d . legacy/*.java OdtworzWzorce.java 2>/dev/null &&
+      cd \"\$tmp\" && javac -d . legacy/*.java Bodzce.java OdtworzWzorce.java 2>/dev/null &&
       java OdtworzWzorce wzorce/return-eligibility.tsv >/dev/null"
 
   musi "harness-template: bramka otwarta" bash -c "
@@ -342,18 +342,81 @@ Z09() {
 
 Z10() {
   echo "Z10 - docker:"
-  local p="praca/Z10"
-  musi  "jest Dockerfile"        bash -c "
-      find '$p' -maxdepth 4 -iname 'Dockerfile*' -not -path '*/target/*' | grep -q ."
-  musi  "obraz istnieje"         bash -c 'docker image inspect warsztat-z10 >/dev/null 2>&1'
-  warto "obraz wazy mniej niz 500 MB" bash -c '
-      s=$(docker image inspect warsztat-z10 --format "{{.Size}}" 2>/dev/null)
-      [ -n "$s" ] && [ "$s" -lt 524288000 ]'
-  warto "jest healthcheck" bash -c "
-      pliki=\$(find '$p' -maxdepth 4 \( -iname 'Dockerfile*' -o -iname '*compose*.y*ml' \) \
-                -not -path '*/target/*' 2>/dev/null)
-      [ -n \"\$pliki\" ] || { echo 'nie ma czego sprawdzic'; exit 1; }
-      grep -qi healthcheck \$pliki"
+  # Szukamy DOKLADNIE tego pliku, nie "dowolnego Dockerfile*" w drzewie:
+  # petclinic przynosi z upstreamu .devcontainer/Dockerfile, wiec luzniejsze
+  # sprawdzenie przechodzilo, zanim uczestnik napisal cokolwiek.
+  local d="praca/Z10/spring-petclinic/Dockerfile"
+  # Bramka BUDUJE obraz sama, pod wlasnym tagiem. Sprawdzanie zastanego
+  # 'warsztat-z10' przepuszczalo obraz z poprzedniej proby, a porownywanie dat
+  # dawalo falszywy alarm, bo build z cache'u dziedziczy stara date utworzenia.
+  # Budowanie jest jedynym sposobem, zeby wiedziec, ze obraz jest z TEGO pliku.
+  local obraz="warsztat-z10-bramka"
+
+  musi  "jest twoj Dockerfile"  bash -c "
+      test -f '$d' && exit 0
+      echo 'brak $d'
+      echo '.devcontainer/Dockerfile z upstreamu to NIE jest rozwiazanie tego zadania.'
+      exit 1"
+
+  musi  "obraz buduje sie z tego Dockerfile"  bash -c "
+      test -f '$d' || exit 1
+      cd \"\$(dirname '$d')\" || exit 1
+      docker build -t '$obraz' . >/tmp/z10-bramka.log 2>&1 && exit 0
+      echo 'docker build sie nie udal. Ostatnie linie:'
+      tail -12 /tmp/z10-bramka.log
+      exit 1"
+
+  musi  "nie startuje jako root"  bash -c "
+      u=\$(docker image inspect '$obraz' --format '{{.Config.User}}' 2>/dev/null)
+      case \"\$u\" in
+        ''|root|0|0:*) echo \"USER w obrazie: '\${u:-brak}' - czyli root\"; exit 1 ;;
+        *) exit 0 ;;
+      esac"
+
+  musi  "obraz ma healthcheck"  bash -c "
+      t=\$(docker image inspect '$obraz' \
+            --format '{{if .Config.Healthcheck}}{{.Config.Healthcheck.Test}}{{end}}' 2>/dev/null)
+      [ -n \"\$t\" ] && exit 0
+      echo 'w obrazie nie ma HEALTHCHECK - sam tekst w pliku to za malo, ma trafic do obrazu'
+      exit 1"
+
+  # Sedno tego zadania: nie "proces wstal", tylko "system jest gotowy do ruchu".
+  # Portu nie publikujemy - healthcheck odpytuje aplikacje od srodka kontenera,
+  # wiec nie wchodzimy w droge niczemu, co uczestnik ma juz na 8080.
+  musi  "kontener dochodzi do healthy"  bash -c "
+      hc=\$(docker image inspect '$obraz'              --format '{{if .Config.Healthcheck}}tak{{end}}' 2>/dev/null)
+      [ -n \"\$hc\" ] || {
+        echo 'obraz nie ma healthchecka, wiec nie ma jak dojsc do healthy.'
+        echo 'Kontener bez HEALTHCHECK nie ma zadnego stanu zdrowia - Docker'
+        echo 'nie sprawdza niczego i nie powie ci, ze cos jest nie tak.'
+        exit 1; }
+      docker rm -f z10-bramka >/dev/null 2>&1
+      docker run -d --name z10-bramka '$obraz' >/dev/null || { echo 'kontener nie wstal'; exit 1; }
+      st=starting
+      for _ in \$(seq 1 45); do
+        st=\$(docker inspect --format '{{.State.Health.Status}}' z10-bramka 2>/dev/null)
+        [ \"\$st\" = healthy ] && break
+        [ \"\$st\" = unhealthy ] && break
+        sleep 2
+      done
+      if [ \"\$st\" != healthy ]; then
+        echo \"po 90 s stan to '\$st', a nie 'healthy'. Log healthchecka:\"
+        docker inspect --format '{{json .State.Health.Log}}' z10-bramka 2>/dev/null | head -c 400
+        echo
+        docker rm -f z10-bramka >/dev/null 2>&1
+        exit 1
+      fi
+      docker rm -f z10-bramka >/dev/null 2>&1
+      exit 0"
+
+  # SOFT swiadomie: prog jest celem, nie granica poprawnosci. 500 MB dziesietnych,
+  # bo w takich jednostkach rozmiar pokazuje 'docker images'.
+  warto "obraz wazy mniej niz 500 MB"  bash -c "
+      s=\$(docker image inspect '$obraz' --format '{{.Size}}' 2>/dev/null)
+      [ -n \"\$s\" ] || exit 1
+      [ \"\$s\" -lt 500000000 ] && exit 0
+      echo \"obraz ma \$((s/1000000)) MB\"
+      exit 1"
   podsumuj
 }
 

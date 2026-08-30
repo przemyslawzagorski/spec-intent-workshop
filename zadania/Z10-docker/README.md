@@ -116,11 +116,22 @@ to techniki proszenia agenta.**
 cd praca/Z10/spring-petclinic
 ```
 
-!!! Uwaga na pobieranie
-    Build ciągnie obrazy bazowe (~500 MB) i zależności Mavena (~151 MB)
-    **wewnątrz kontenera**. Przy grupie na łączach domowych to jest wąskie
-    gardło. Jeśli możesz — ściągnij obrazy bazowe zawczasu:
-    `docker pull maven:3.9-eclipse-temurin-25 && docker pull eclipse-temurin:25-jre`
+!!! Warunek wstępny, nie porada
+    **To zadanie mieści się w 50 minutach tylko z pobranymi obrazami bazowymi.**
+    Same buildy to u mnie około sześciu minut czystego czekania, a bez cache'u
+    dochodzi ~500 MB obrazów i ~151 MB zależności Mavena ściąganych **wewnątrz
+    kontenera**. Na łączu domowym, w grupie, to potrafi zjeść cały blok.
+
+    Zrób to **przed** zadaniem — jest w pre-worku, ale warto sprawdzić:
+
+    ```bash
+    docker pull maven:3.9-eclipse-temurin-25
+    docker pull eclipse-temurin:25-jre
+    ```
+
+    Jeśli tego nie masz, a czas ucieka: **zrób sam wariant wieloetapowy**
+    i porównaj z moimi liczbami z omówienia. Stracisz własny pomiar naiwnego
+    builda, ale nie stracisz pointy.
 
 **1 · Poproś agenta o Dockerfile** (2 min). Bez podpowiedzi:
 [prompty/dockerfile.md](prompty/dockerfile.md), wariant A.
@@ -155,11 +166,28 @@ pliku. Zbuduj, zmierz rozmiar, zmień linię kodu i przebuduj ponownie.
 ```bash
 docker build -t warsztat-z10 .
 docker run -d --name z10 -p 8080:8080 warsztat-z10
-docker inspect --format '{{.State.Health.Status}}' z10
 ```
 
-**Co zobaczysz:** przez pierwsze kilkanaście sekund `starting`, potem
-`healthy`. U mnie zajęło to **około 15 sekund**.
+**Nie sprawdzaj stanu od razu.** Zaraz po `run` zobaczysz `starting` i to jest
+poprawne — Docker czeka na `start-period`. Poczekaj na wynik, zamiast go
+odczytywać raz:
+
+```bash
+for i in $(seq 1 30); do
+  st=$(docker inspect --format '{{.State.Health.Status}}' z10)
+  echo "$i: $st"
+  [ "$st" = healthy ] || [ "$st" = unhealthy ] && break
+  sleep 2
+done
+```
+
+**Co zobaczysz:** kilkanaście linii `starting`, potem `healthy`. U mnie zajęło
+to **około 15 sekund**.
+
+To nie jest sztuczka na potrzeby ćwiczenia. **`healthy` to stan, na który się
+czeka** — dokładnie tak samo robi `depends_on: condition: service_healthy`
+w compose i każdy sensowny deploy. Jednorazowy odczyt mówi ci tylko, że
+kontener istnieje.
 
 Jeśli utknie na `unhealthy` — aplikacja może działać poprawnie, a zepsuty
 być sam healthcheck. Powód jest w jego logu, nie w logu aplikacji:
@@ -172,6 +200,16 @@ docker inspect --format '{{json .State.Health.Log}}' z10
 docker rm -f z10
 cd ../../.. && ./sprawdz Z10
 ```
+
+**Co robi ta bramka — bo nie ogląda plików.** Bierze **twój**
+`praca/Z10/spring-petclinic/Dockerfile`, **buduje z niego obraz sama**, a potem
+sprawdza w gotowym obrazie: czy `USER` to nie root, czy jest `HEALTHCHECK`,
+i czy uruchomiony kontener **dochodzi do `healthy`** w ciągu 90 sekund.
+Rozmiar poniżej 500 MB jest uwagą, nie warunkiem — próg jest celem, nie granicą
+poprawności.
+
+Budowanie zajmuje sekundy, bo cache masz rozgrzany po kroku 3. Jeśli healthcheck
+nie przejdzie, bramka pokaże ci jego log — ten sam, którego szukałeś wyżej.
 
 ## Pytanie na czat
 
@@ -190,6 +228,15 @@ Moje pomiary, na tym samym petclinicu:
 | pierwszy build | 183 s | **221 s** |
 | **przebudowa po zmianie kodu** | **139 s** | **17 s** |
 | rozmiar obrazu | 715 MB | **413 MB** |
+
+> **To są moje liczby, nie oczekiwany wynik.** Czasy budowania zależą od łącza,
+> dysku i tego, co masz w cache'u — u kogoś, kto powtórzył ten pomiar,
+> wieloetapowy build wyszedł 174 s zamiast 221. **Rozmiary są powtarzalne
+> (te same obrazy bazowe), czasy nie.** Porównuj proporcje w swoim przebiegu,
+> nie swoje liczby z moimi.
+>
+> Rozmiary podaję w MB dziesiętnych, bo w takich pokazuje je `docker images`.
+> `docker image inspect --format '{{.Size}}'` da ci to samo w bajtach.
 
 Pogadamy o:
 
