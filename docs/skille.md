@@ -133,7 +133,7 @@ i słownik etykiet triage** — konfiguruje to jednorazowo
 | `to-spec` | **nie** — pisze do issue trackera | — |
 | `to-tickets` | **nie** — jw. | Z05 ★, ale najpierw setup |
 | `implement` | **nie** — działa „ze spec albo biletów" | — |
-| `code-review` | **nie** — zakłada standardy i spec w repo | Z08 ★ jako kontrast |
+| `code-review` | **nie** — zakłada standardy i spec w repo | Z08 — wzięliśmy stamtąd **zasadę dwóch osi**, nie implementację |
 | `wayfinder` | **nie** — planowanie na tablicy biletów | poza zakresem warsztatu |
 
 **Dlatego w zadaniach polecamy tylko te z pierwszej grupy.** Reszta jest dobra,
@@ -142,14 +142,15 @@ ale w piaskownicy warsztatowej zacznie od pytania o konfigurację zamiast od rob
 
 ---
 
-## Trzy skille napisaliśmy sami
+## Cztery skille napisaliśmy sami
 
 Leżą w rozwiązaniach i są jednocześnie przykładem, jak wygląda własny skill:
 
 | Skill | Gdzie leży | Do czego |
 |---|---|---|
 | `dokumentacja-repo` | `zadania/Z06-.../rozwiazanie/skill-dokumentacja/` | dokumentacja z kodu, bez zmyślania, wg Diátaxis |
-| `krytyk-adwersaryjny` | `zadania/Z08-.../rozwiazanie/skill-krytyk/` | przegląd szukający powodów, dla których kod nie zadziała |
+| `krytyk-adwersaryjny` | `zadania/Z08-.../rozwiazanie/skill-krytyk/` | oś „co się zepsuje" — dostaje sam kod, szuka powodów, dla których nie zadziała |
+| `roast-obietnicy` | `zadania/Z08-.../rozwiazanie/skill-roast-obietnicy/` | oś „czego tu nie ma" — dostaje kod **i** specyfikację, wypełnia tabelę wymaganie → linia → werdykt |
 | `zlote-wzorce` | `zadania/Z09-.../rozwiazanie/skill-zlote-wzorce/` | siatka pod refaktor kodu bez testów |
 
 **Nie musisz mieć żadnego skilla, żeby przejść warsztat.** Przy każdym zadaniu

@@ -8,7 +8,7 @@
 > bez historii rozmowy. Recenzent w Bunie dostawał dokładnie tyle:
 > *„its context: only the diff"*.
 
----
+--- WKLEJASZ OD TEGO MIEJSCA ---
 
 Jesteś recenzentem kodu. **Załóż, że poniższy kod jest zły.**
 

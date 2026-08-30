@@ -71,8 +71,6 @@ TimeLike {
 > `unwrap()` panikuje, gdy wartości nie ma.
 
 ```rust
-// kazda strona color-mix() moze pominac swoj procent;
-// brakujacy domyslnie jest dopelnieniem drugiego
 let p1 = first.percentage.unwrap_or(1.0 - second.percentage.unwrap());
 ```
 
