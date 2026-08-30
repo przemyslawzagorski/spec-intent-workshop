@@ -21,6 +21,12 @@ Odpowiadasz na jedno pytanie: **czy to, co tu jest, to jest to, co zamówiono?**
 **Krok 1.** Wypisz wymagania z obietnicy. Ponumeruj tak jak w dokumencie;
 jeśli nie są ponumerowane — po jednym na zdanie, które da się sprawdzić.
 
+**Bierzesz tylko to, co dokument stawia jako wymaganie.** Tło, kontekst, opis
+sytuacji i zdania o tym, jak system bywa uruchamiany, **nie są wymaganiami** —
+nawet jeśli brzmią konkretnie. Jeśli wahasz się, czy coś jest wymaganiem, nie
+wpisuj tego do tabeli: wymień je osobno, pod tabelą, jako „zdania, których nie
+uznałem za wymagania". Wtedy człowiek to rozstrzygnie.
+
 **Krok 2.** Każde wymaganie dostaje wiersz. Bez wyjątku, także te oczywiste.
 
 | # | Wymaganie (skrótem) | Linia w kodzie | Werdykt |

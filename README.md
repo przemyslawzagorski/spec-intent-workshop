@@ -163,6 +163,12 @@ przygotuj           stawia piaskownicę pod zadanie
 sprawdz             sprawdza, czy zadanie zrobione
 ```
 
+**Odpowiedzi do zadań są w repo** — w `zadania/*/rozwiazanie/`. Zaglądaj po próbie,
+nie przed; w Z08 to psuje całe ćwiczenie i jest tam o tym osobne ostrzeżenie.
+
+Osobno istnieją **materiały prowadzącego** (`PROWADZACY.md`, karty prowadzenia,
+slajdy, `ODPOWIEDZI.md`). Nie ma ich w tej kopii i nie są ci potrzebne.
+
 Dwa repozytoria robocze:
 
 **[spring-petclinic](https://github.com/spring-projects/spring-petclinic)** —
@@ -202,4 +208,5 @@ Najczęstsze rzeczy:
 | `mkdocs 2.0 is coming` przy budowaniu dokumentacji | też normalne, to zapowiedź nowej wersji; my jesteśmy przypięci na 1.6 |
 
 Jeśli coś dalej nie działa — napisz do prowadzącego **przed zajęciami**,
-nie w dniu zajęć.
+nie w dniu zajęć. Harmonogram i reszta ustaleń organizacyjnych są po jego stronie,
+w `PROWADZACY.md`.

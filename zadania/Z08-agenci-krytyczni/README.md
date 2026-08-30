@@ -1,14 +1,42 @@
 # Z08 · Agenci krytyczni
 
-**50 min** · handouty w repo · bez bramki — to zadanie omawiamy
+**50 min** · handouty w repo · bez bramki — wynikiem jest twój `praca/Z08/ROAST.md`
+
+| Krok | Co robisz | Min |
+|---|---|---:|
+| **1** | czytasz trzy fragmenty cudzego kodu i szukasz błędu **sam, bez agenta** | 10 |
+| **2** | ten sam fragment dostaje agent-krytyk — porównujesz z sobą | 8 |
+| **3** | dwa różne przeglądy tego samego kodu, obok siebie → `ROAST.md` | 18 |
+| | omówienie na żywo | 14 |
 
 ## O co chodzi
 
-Agent, który napisał kod, jest najgorszą możliwą osobą do jego przeglądu.
-Nie dlatego, że jest słaby — dlatego, że pamięta, co **chciał** napisać,
-i czyta swój kod przez ten pryzmat. Dokładnie jak człowiek.
+Agent kończy zadanie i melduje gotowe. Pytasz: „przejrzyj to jeszcze raz".
+Agent przegląda **własny kod**, znajduje trzy uwagi o nazwach zmiennych, chwali
+strukturę i potwierdza, że jest dobrze.
 
-To zadanie pokazuje, co się zmienia, gdy rozdzielisz te role.
+Nie kłamie. On naprawdę tak to widzi — pamięta, co **chciał** napisać, i czyta
+przez ten pryzmat. Dokładnie jak człowiek.
+
+W tym module rozdzielasz role i sprawdzasz na własnym ekranie, ile to zmienia.
+
+### Co z tego wychodzisz
+
+**1 · Gotową procedurę przeglądu na dwie osie.** Dwa prompty, które w poniedziałek
+puszczasz na swoim kodzie — do wklejenia albo do wywołania nazwą jako skill.
+
+**2 · Odpowiedź na pytanie, którego prawdopodobnie nikt ci nie zadał:** czym
+różni się *„znalazłem pięć błędów"* od *„sprawdziłem pięć wymagań"* — i dlaczego
+pierwsze **nie jest dowodem** drugiego. To jest jedno zdanie, ale przekonuje
+dopiero wtedy, gdy sam zobaczysz oba raporty obok siebie. Dlatego to ćwiczenie,
+a nie slajd.
+
+**3 · Konkretną liczbę o sobie:** ile z trzech podrzuconych błędów znajdziesz
+sam, w dziesięć minut, w kodzie, który kompiluje się bez jednego ostrzeżenia.
+
+**To zadanie nie ma bramki i to nie jest przeoczenie.** Wszystko, co tu robisz,
+ocenia człowiek — bo dokładnie o tę granicę chodzi: gdzie kończy się to, co
+maszyna rozstrzygnie za ciebie, i zaczyna to, co musisz przeczytać sam.
 
 ## Jak zwykle to robimy
 
@@ -79,7 +107,8 @@ walidacja** — „czy zbudowano poprawnie" kontra „czy zbudowano to, co trzeb
 teraz **model, który chce ci pomóc**.
 
 I tu jest cały problem. Zmierzyliśmy to na przykładzie z tego zadania, czterema
-przebiegami tego samego modelu:
+przebiegami tego samego modelu — protokół, liczby i **ograniczenia tego pomiaru**
+są w [rozwiazanie/POMIAR.md](rozwiazanie/POMIAR.md):
 
 | | Co pyta | Co dostaje | Co daje na wyjściu |
 |---|---|---|---|
@@ -88,7 +117,8 @@ przebiegami tego samego modelu:
 
 **Wynik pomiaru był inny, niż się spodziewaliśmy, i mówimy to wprost:** obie osie
 znalazły prawie to samo. Adwersaryjny krytyk, któremu **dodaliśmy** specyfikację,
-też znalazł wszystko — niczego nie zgubił.
+też znalazł wszystko — niczego nie zgubił. Pierwsza wersja tego modułu twierdziła
+inaczej; teza nie przeszła pomiaru i wyleciała.
 
 Różnica nie jest w tym, ile znajdują. Jest w tym, **czy da się sprawdzić, czego
 nie sprawdziły.** Lista problemów uporządkowana po wadze nie odpowiada na pytanie
@@ -136,6 +166,11 @@ Zaglądanie do nich **nie psuje ćwiczenia** — to są prompty, nie odpowiedzi.
 ---
 ### Krok 1 · Sam, bez agenta (10 min)
 
+> **Po co ten krok.** Żeby porównanie z agentem cokolwiek znaczyło, musisz mieć
+> **własny wynik**. To jedyne miejsce w całym warsztacie, w którym mierzysz
+> siebie, zanim włączysz narzędzie. Jeśli ten krok przeskoczysz, reszta zadania
+> zamienia się w oglądanie cudzych raportów.
+
 Otwórz [handouts/1-fragmenty-rust.md](handouts/1-fragmenty-rust.md).
 
 > **Nie wklejaj tych fragmentów do agenta.** Przez najbliższe dziesięć minut
@@ -157,12 +192,21 @@ nie da się znaleźć. Z nim — da się.
 3. **Założenie o danych wejściowych, które nie musi być prawdziwe.**
 
 **Co zobaczysz w pliku:** trzy bloki kodu Rusta, przy każdym jedno zdanie
-faktu w cytacie i pytanie „co jest nie tak?". Odpowiedzi **nie ma w tym pliku** —
-są w rozwiązaniu i pokażę je przy omówieniu.
+faktu w cytacie i pytanie „co jest nie tak?".
 
-Zapisz sobie przy każdym fragmencie: *znalazłem / nie znalazłem*. Będzie potrzebne.
+Odpowiedzi **nie ma w tym pliku** — są w [rozwiazanie/KLUCZ.md](rozwiazanie/KLUCZ.md),
+część 1. **Nie otwieraj go teraz.** Raz przeczytanego błędu nie da się już
+odszukać samodzielnie po raz drugi, a to jest jedyne zadanie w warsztacie,
+w którym to naprawdę psuje całą wartość.
+
+**Koniec kroku:** masz przy każdym z trzech fragmentów zanotowane
+*znalazłem / nie znalazłem*. Trzy słowa. Będą potrzebne w kroku 2 i na czacie.
 
 ### Krok 2 · Ten sam fragment, ale agent (8 min)
+
+> **Po co ten krok.** Sprawdzasz jedną rzecz: czy **rola**, którą nadasz modelowi,
+> zmienia wynik. Ten sam model, ten sam kod, ale prośba brzmi „załóż, że ten kod
+> jest zły" zamiast „przejrzyj to". Za chwilę zobaczysz, że to nie jest kosmetyka.
 
 **Weź jeden fragment — ten, z którym najbardziej się męczyłeś.** Nie trzy.
 Trzy sesje w osiem minut to nie jest ćwiczenie, to wyścig.
@@ -173,15 +217,31 @@ Wklej [prompty/krytyk.md](prompty/krytyk.md) — **wszystko poniżej linii
 **Bez zdania faktu z ramki.** To jest test: czy agent sam dojdzie do tego,
 co ty wiedziałeś tylko dlatego, że ci to podpowiedziałem.
 
-**Co zobaczysz:** listę znalezisk, przy każdym miejsce, scenariusz i ocenę
-„realne czy teoretyczne". Jeśli agent zamiast tego chwali kod albo komentuje
-nazwy zmiennych — nie wkleiłeś całego promptu.
+**Co zobaczysz:** listę znalezisk, a przy każdym cztery rzeczy — **gdzie**,
+**kiedy wybucha** (konkretne wejście), **czy to realne czy teoretyczne**
+i **minimalna poprawka**. Uporządkowaną od najgroźniejszego.
 
-**Porównaj z tym, co znalazłeś sam.** Zanotuj obie liczby.
+Jeśli agent zamiast tego chwali kod, komentuje nazwy zmiennych albo pisze ogólniki
+w rodzaju „warto rozważyć obsługę błędów" — **nie wkleiłeś całego promptu.**
+Sprawdź, czy zacząłeś od linii `--- WKLEJASZ OD TEGO MIEJSCA ---`.
+
+**Koniec kroku:** masz dwie liczby obok siebie — ile znalazłeś ty w tym jednym
+fragmencie, ile znalazł agent. I wiesz, czy trafił w ten sam błąd co ty, czy w inny.
 
 Pozostałe dwa fragmenty są w ★, jeśli starczy czasu.
 
 ### Krok 3 · Dwie osie na tym samym kodzie (18 min)
+
+> **Po co ten krok — i czym on nie jest.** Puszczasz dwa różne przeglądy na tym
+> samym kodzie po to, żeby **zobaczyć obok siebie dwa różne kształty raportu**.
+> To jest demonstracja, nie eksperyment: sesje A i B różnią się jednocześnie
+> promptem, celem, kontekstem i formatem odpowiedzi — cztery rzeczy naraz, więc
+> z samego porównania nie orzekniesz, która z nich zrobiła różnicę.
+>
+> Kontrolowaną wersję zrobiliśmy osobno i opisaliśmy w
+> [rozwiazanie/POMIAR.md](rozwiazanie/POMIAR.md). Jeśli chcesz ją powtórzyć
+> u siebie — jest w ★ jako „Powtórz nasz pomiar" i wymaga zmiany **jednej**
+> rzeczy, nie czterech.
 
 Do tej pory miałeś jednego recenzenta. Teraz dwóch — i cała rzecz polega na tym,
 żeby **dać im co innego**.
@@ -209,6 +269,11 @@ Przeczytaj oba, zanim odpalisz cokolwiek — bez tego nie ocenisz raportów.
 > i **wklej treść plików ręcznie, nie podawaj ścieżek**. Agent z dostępem do
 > katalogu sam sobie doczyta `SPEC.md` i sesja A przestanie być sesją A.
 > Najczystszy wariant to drugie narzędzie, ale nie jest konieczny.
+>
+> **Jak sprawdzisz, że się udało** — bo na słowo nie musisz wierzyć. Przejrzyj
+> raport sesji A i poszukaj słów `SPEC`, `wymaganie`, `W1`…`W5`. Jeśli któreś
+> tam jest, agent dotarł do specyfikacji i sesja A jest do wyrzucenia.
+> **Ta jedna kontrola jest ważniejsza niż to, którego narzędzia użyłeś.**
 
 **Czego się spodziewać:**
 
@@ -221,9 +286,6 @@ Przeczytaj oba, zanim odpalisz cokolwiek — bez tego nie ocenisz raportów.
 
 Jeśli sesja B odpowiada prozą zamiast tabelą — nie wkleiłeś całego promptu.
 
-**Zapisz oba raporty do `praca/Z08/ROAST.md`, jeden pod drugim. Nie scalaj ich.**
-To jest twój wynik z tego zadania.
-
 **Teraz najważniejsze — i uprzedzam, że wynik może cię rozczarować.**
 
 Porównaj obie listy i odpowiedz sobie na dwa pytania:
@@ -231,11 +293,38 @@ Porównaj obie listy i odpowiedz sobie na dwa pytania:
 > **1. Czy sesja B znalazła coś, czego sesja A nie znalazła?**
 > Bardzo możliwe, że **prawie nic**. My mierzyliśmy — i tak właśnie wyszło.
 >
-> **2. Weź sam raport sesji A i spróbuj odpowiedzieć: czy sprawdzono
-> wszystkie pięć wymagań ze `SPEC.md`? Które?**
+> **2. Weź sam raport sesji A — tylko jego — i spróbuj orzec: czy sprawdzono
+> wszystkie pięć wymagań ze `SPEC.md`? Które konkretnie?**
 
-Drugie pytanie jest całym sensem tego kroku. **Zapisz odpowiedź na górze
-`ROAST.md`, jednym zdaniem.**
+**Drugie pytanie jest całym sensem tego kroku.** Nie chodzi o to, że sesja A jest
+gorsza. Chodzi o to, że z jej raportu **nie da się tego odczytać** — a z tabeli
+sesji B da się, wiersz po wierszu. Zauważ, co to znaczy w praktyce: raport A
+możesz przeczytać i uznać, że wiesz, jak jest. Nie wiesz.
+
+### Twój wynik: `praca/Z08/ROAST.md`
+
+Jeden plik, trzy części, w tej kolejności:
+
+```markdown
+# Z08 — dwie osie
+
+## Werdykt
+<jedno zdanie: czy z samego raportu sesji A da się orzec,
+ które z pięciu wymagań zostały sprawdzone>
+
+## Sesja A — krytyk (sam kod)
+<wklejony raport, bez zmian>
+
+## Sesja B — roast obietnicy (kod + SPEC)
+<wklejona tabela pokrycia, bez zmian>
+```
+
+**Nie scalaj raportów w jeden.** Cała wartość tego pliku polega na tym, że widać
+w nim dwa różne kształty odpowiedzi na to samo pytanie — a scalone znów wyglądają
+jak jedna lista.
+
+**Koniec kroku:** `ROAST.md` istnieje, ma trzy sekcje, a zdanie w „Werdykt"
+napisałeś sam, nie agent.
 
 ## Pytanie na czat
 
@@ -244,7 +333,8 @@ Dwa razy, w dwóch momentach:
 **Po kroku 2:** dwie rzeczy w jednej linii — na ilu z trzech fragmentów coś
 znalazłeś sam, i czy agent znalazł błąd w tym jednym, który mu dałeś.
 Format: `sam=1z3 agent=tak`. **Nie sprawdzamy jeszcze, kto miał rację** —
-klucz dostajesz przy omówieniu.
+odpowiedzi porównujemy razem przy omówieniu. Klucz leży w repo
+([rozwiazanie/KLUCZ.md](rozwiazanie/KLUCZ.md)) i naprawdę warto z nim poczekać.
 
 **Po kroku 3:** jedno zdanie — czy z samego raportu sesji A dałoby się orzec,
 które z pięciu wymagań zostały sprawdzone?
@@ -268,23 +358,36 @@ Pogadamy o:
   przebiegi. Adwersaryjny krytyk **ze** specyfikacją znalazł wszystko, co krytyk
   bez niej, i ustawił brakujące wymaganie na pierwszym miejscu. **Teza „recenzent
   ze specyfikacją przestaje szukać błędów" jest fałszywa** i wyleciała z tego
-  materiału. Pokażę liczby.
+  materiału. Liczby i protokół: [rozwiazanie/POMIAR.md](rozwiazanie/POMIAR.md) —
+  razem z listą tego, czego ten pomiar **nie** dowodzi.
 - **Co z tego zostaje.** Druga oś nie znajduje więcej. Zamienia ranking opinii
   w **tabelę pokrycia**. Weź raport sesji A i spróbuj z niego orzec, czy
   sprawdzono W3. Nie da się. Z tabeli — da się. **To jest różnica między
   „znalazłem błędy" a „sprawdziłem wymagania i mam dowód przy każdym".**
+- **I od razu granica tej metody.** W naszym pomiarze jedno znalezisko z klucza
+  — brak nadrabiania przypomnień po dniu przestoju — **nie wyszło w żadnym
+  z czterech przebiegów.** Także w tym z tabelą pokrycia. Tabela mówi ci,
+  czego recenzent **nie sprawdził**. Nie mówi, czego **nie zauważył nikt**.
 - **Dlaczego tabela wymusza numer linii.** „SPEŁNIONE" bez wskazania miejsca to
   zgadywanka pod oczekiwanie — model wypełni ją na zielono, bo tego od niego
   chcesz. Numer linii jest tanim odpowiednikiem bramki z Z07.
 - **Fałszywe alarmy, prawdziwe.** Nasz roast wyprodukował wymaganie, którego
   nie ma („zadanie uruchamia się raz na dobę" wyciągnięte z sekcji *Kontekst*),
-  i **złamał własny zakaz** zgłaszania błędów. Skill to prośba, nie mechanizm —
-  ta sama lekcja co w Z01 i Z07.
+  i **złamał własny zakaz** zgłaszania błędów.
+
+  Pierwszą z tych rzeczy **poprawiliśmy w promptcie** po pomiarze — dopisaliśmy,
+  że tło nie jest wymaganiem. Drugiej nie da się poprawić żadnym zdaniem, bo
+  zakaz w promptcie **już tam był i został złamany**. To jest cała lekcja:
+  **skill to prośba, nie mechanizm** — dokładnie jak w Z01 i Z07. Prośbę można
+  doprecyzować. Egzekwować jej nie można.
 - **Kiedy przenieść regułę do kompilatora.** Gdy krytyk łapie tę samą klasę
   błędu trzeci raz, zapytaj, czy nie da się jej zamienić w błąd budowania.
   To jest najtańsza recenzja, jaka istnieje.
 
 ## Skąd te fragmenty
+
+*Tło. Nie jest potrzebne do wykonania ćwiczenia — przeczytaj po nim albo
+wtedy, gdy ktoś zapyta „a skąd to niby wiadomo".*
 
 Wszystkie trzy pochodzą z [bun.com/blog/bun-in-rust](https://bun.com/blog/bun-in-rust)
 (Jarred Sumner, 8 lipca 2026), z sekcji **Adversarial review**, podpisanej tam
@@ -305,6 +408,9 @@ konkretne i sprawdzalne, ale to nie jest niezależne studium przypadku.
 
 
 ## Skąd pomysł na dwie osie
+
+*Tło, do przeczytania po ćwiczeniu. Jest tu, bo ten pomysł nie jest nasz
+i uczciwiej jest napisać czyj.*
 
 **Ma czterdzieści siedem lat.** Rozdzielenie *weryfikacji* („czy zbudowano
 poprawnie") od *walidacji* („czy zbudowano to, co trzeba") opisał Barry Boehm
@@ -356,7 +462,7 @@ czyli przy przekazaniu, odbiorze, audycie i wszędzie tam, gdzie ktoś zapyta
 
 | ★ | Co robisz | Min |
 |---|---|---|
-| **Powtórz nasz pomiar** | Trzecia sesja: prompt krytyka, ale wklej **razem ze `SPEC.md`**. Porównaj z sesją A. Czy dodanie specyfikacji cokolwiek popsuło? U nas nie — sprawdź, czy u ciebie też. **To jest jedyne ćwiczenie, które testuje tezę tego modułu.** | 15 |
+| **Powtórz nasz pomiar** | Trzecia sesja: **ten sam** prompt krytyka co w sesji A, ale wklej **razem ze `SPEC.md`**. Zmieniasz **jedną** rzecz, więc różnicę da się przypisać. Czy dodanie specyfikacji cokolwiek popsuło? U nas nie — sprawdź, czy u ciebie też. **To jest jedyne ćwiczenie, które testuje tezę tego modułu**, i jedyne, w którym krok 3 zamienia się w eksperyment. | 15 |
 | **Dwie osie na swoim** | Powtórz krok 3 na czymś własnym: `SPEC.md` z Z05, `CONTEXT.md` z Z03 albo `bramka` z Z07 razem z opisem, co miała pilnować. | 20 |
 | **Dwa pozostałe fragmenty Rusta** | Krok 2 na fragmentach, których nie zdążyłeś. | 12 |
 | **Ta sama klasa błędów w Javie** | [handouts/2-kandydat-java.md](handouts/2-kandydat-java.md) — trzy fragmenty w języku, który znasz. Większości ludzi idzie **trudniej** niż w Ruście: znajomy idiom usypia czujność. | 15 |
@@ -368,9 +474,14 @@ czyli przy przekazaniu, odbiorze, audycie i wszędzie tam, gdzie ktoś zapyta
 
 ## Rozwiązanie
 
-Odpowiedzi **omawiamy razem zaraz po ćwiczeniu** — prowadzący pokazuje je na
-ekranie i rozdaje po zajęciach.
+[rozwiazanie/KLUCZ.md](rozwiazanie/KLUCZ.md) — komplet odpowiedzi: trzy fragmenty
+Rusta, trzy izomorfy w Javie, dziewięć znalezisk z przykładu do roastu i wzorcowa
+tabela pokrycia.
 
-**Jeśli masz je pod ręką, nie zaglądaj przed ćwiczeniem.** To jedyne zadanie
-w warsztacie, w którym to naprawdę psuje całą wartość: raz przeczytanego błędu
-nie da się odszukać po raz drugi.
+[rozwiazanie/POMIAR.md](rozwiazanie/POMIAR.md) — protokół czterech przebiegów,
+liczby i **uczciwa lista tego, czego ten pomiar nie dowodzi**. Zajrzyj tam, zanim
+zaczniesz cytować nasze wnioski komuś innemu.
+
+> **Nie zaglądaj przed ćwiczeniem.** To jedyne zadanie w warsztacie, w którym to
+> naprawdę psuje całą wartość: raz przeczytanego błędu nie da się odszukać
+> samodzielnie po raz drugi. Odpowiedzi omawiamy wspólnie zaraz po ćwiczeniu.

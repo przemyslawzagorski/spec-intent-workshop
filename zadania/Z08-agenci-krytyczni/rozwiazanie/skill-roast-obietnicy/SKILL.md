@@ -25,6 +25,13 @@ który masz wyłapywać u innych.
 w dokumencie. Jeśli nie są — ponumeruj sam, po jednym na zdanie, które da się
 sprawdzić.
 
+**Bierzesz tylko to, co dokument stawia jako wymaganie.** Tło, kontekst, opis
+sytuacji i zdania o tym, jak system bywa uruchamiany, **nie są wymaganiami** —
+nawet jeśli brzmią konkretnie. Przy wątpliwości nie wpisuj do tabeli: wymień
+osobno, pod nią, jako „zdania, których nie uznałem za wymagania". To jest
+najczęstszy sposób, w jaki ta metoda produkuje szum — wymaganie wyjęte z tła
+i odhaczone jako BRAK wygląda dokładnie tak samo jak prawdziwa luka.
+
 **Krok 2.** Każde wymaganie dostaje wiersz. **Bez wyjątku, także te oczywiste.**
 
 | # | Wymaganie (skrótem) | Linia w kodzie | Werdykt |
